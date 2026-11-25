@@ -4727,9 +4727,13 @@
 	},
 
 	"Sri Lanka": {
-		"Sri Lanka Tax": {
-			"account_name": "VAT",
-			"tax_rate": 12.00
+		"Sri Lanka VAT 18%": {
+			"account_name": "Output VAT",
+			"tax_rate": 18.00
+		},
+		"Sri Lanka Zero Rated VAT": {
+			"account_name": "Output VAT",
+			"tax_rate": 0.00
 		}
 	},
 

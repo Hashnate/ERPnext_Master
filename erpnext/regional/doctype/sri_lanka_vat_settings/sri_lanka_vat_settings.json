@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "autoname": "field:company",
+ "creation": "2026-11-25 12:00:00.000000",
+ "description": "VAT settings and account mapping for Sri Lanka VAT Return reporting.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "default_vat_rate",
+  "tin_number",
+  "vat_registration_number",
+  "vat_accounts"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "18",
+   "fieldname": "default_vat_rate",
+   "fieldtype": "Percent",
+   "label": "Default Standard VAT Rate (%)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tin_number",
+   "fieldtype": "Data",
+   "label": "TIN Number"
+  },
+  {
+   "fieldname": "vat_registration_number",
+   "fieldtype": "Data",
+   "label": "VAT Registration Number"
+  },
+  {
+   "fieldname": "vat_accounts",
+   "fieldtype": "Table",
+   "label": "VAT Accounts",
+   "options": "Sri Lanka VAT Account",
+   "reqd": 1
+  }
+ ],
+ "icon": "percent",
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-25 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Regional",
+ "name": "Sri Lanka VAT Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Auditor",
+   "share": 1
+  }
+ ],
+ "quick_entry": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

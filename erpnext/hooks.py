@@ -464,6 +464,11 @@ doc_events = {
 	"Payment Entry": {
 		"on_trash": "erpnext.regional.check_deletion_permission",
 	},
+	"Salary Slip": {
+		"validate": [
+			"erpnext.regional.sri_lanka.payroll.apply_sri_lanka_payroll_deductions",
+		],
+	},
 	"Company": {
 		"after_rename": "erpnext.regional.rename_vat_settings",
 	},
@@ -701,6 +706,10 @@ regional_overrides = {
 	"Italy": {
 		"erpnext.controllers.taxes_and_totals.update_itemised_tax_data": "erpnext.regional.italy.utils.update_itemised_tax_data",
 		"erpnext.controllers.accounts_controller.validate_regional": "erpnext.regional.italy.utils.sales_invoice_validate",
+	},
+	"Sri Lanka": {
+		"erpnext.controllers.taxes_and_totals.update_itemised_tax_data": "erpnext.regional.sri_lanka.vat.update_itemised_tax_data",
+		"erpnext.controllers.accounts_controller.validate_regional": "erpnext.regional.sri_lanka.vat.validate_sri_lanka_invoice",
 	},
 }
 user_data_fields = [

@@ -1,0 +1,162 @@
+{
+ "actions": [],
+ "autoname": "field:company",
+ "creation": "2026-11-25 12:00:00.000000",
+ "description": "Sri Lanka EPF, ETF, and APIT (PAYE) statutory payroll settings.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "auto_calculate_statutory",
+  "epf_employer_code",
+  "etf_employer_code",
+  "section_break_epf_etf",
+  "epf_employee_rate",
+  "epf_employer_rate",
+  "etf_employer_rate",
+  "column_break_components",
+  "epf_employee_component",
+  "apit_component",
+  "section_break_apit",
+  "non_resident_apit_rate",
+  "apit_slabs"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_calculate_statutory",
+   "fieldtype": "Check",
+   "label": "Auto Calculate Statutory Deductions on Salary Slip"
+  },
+  {
+   "fieldname": "epf_employer_code",
+   "fieldtype": "Data",
+   "label": "EPF Employer Registration No."
+  },
+  {
+   "fieldname": "etf_employer_code",
+   "fieldtype": "Data",
+   "label": "ETF Employer Registration No."
+  },
+  {
+   "fieldname": "section_break_epf_etf",
+   "fieldtype": "Section Break",
+   "label": "EPF & ETF Rates"
+  },
+  {
+   "default": "8",
+   "fieldname": "epf_employee_rate",
+   "fieldtype": "Percent",
+   "label": "EPF Employee Rate (%)",
+   "reqd": 1
+  },
+  {
+   "default": "12",
+   "fieldname": "epf_employer_rate",
+   "fieldtype": "Percent",
+   "label": "EPF Employer Rate (%)",
+   "reqd": 1
+  },
+  {
+   "default": "3",
+   "fieldname": "etf_employer_rate",
+   "fieldtype": "Percent",
+   "label": "ETF Employer Rate (%)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_components",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Salary Component name used for Employee EPF deduction (e.g. EPF Employee)",
+   "fieldname": "epf_employee_component",
+   "fieldtype": "Data",
+   "label": "EPF Employee Salary Component"
+  },
+  {
+   "description": "Salary Component name used for APIT/PAYE deduction (e.g. APIT / PAYE)",
+   "fieldname": "apit_component",
+   "fieldtype": "Data",
+   "label": "APIT / PAYE Salary Component"
+  },
+  {
+   "fieldname": "section_break_apit",
+   "fieldtype": "Section Break",
+   "label": "APIT / PAYE Progressive Tax Slabs"
+  },
+  {
+   "default": "25",
+   "fieldname": "non_resident_apit_rate",
+   "fieldtype": "Percent",
+   "label": "Non-Resident APIT Flat Rate (%)"
+  },
+  {
+   "fieldname": "apit_slabs",
+   "fieldtype": "Table",
+   "label": "Monthly APIT Tax Slabs",
+   "options": "Sri Lanka APIT Slab"
+  }
+ ],
+ "icon": "money",
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-25 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Regional",
+ "name": "Sri Lanka Payroll Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
