@@ -1,0 +1,164 @@
+{
+ "actions": [],
+ "creation": "2026-11-26 13:20:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "bot_config_section",
+  "enabled",
+  "bot_token",
+  "bot_username",
+  "column_break_1",
+  "webhook_secret",
+  "webhook_url",
+  "owner_config_section",
+  "owner_chat_id",
+  "accounts_chat_id",
+  "column_break_2",
+  "daily_summary_time",
+  "enable_customer_email_reminders",
+  "approval_toggles_section",
+  "enable_po_approval",
+  "enable_leave_approval",
+  "column_break_3",
+  "enable_expense_approval",
+  "enable_daily_summary",
+  "enable_overdue_reminders"
+ ],
+ "fields": [
+  {
+   "fieldname": "bot_config_section",
+   "fieldtype": "Section Break",
+   "label": "Telegram Bot Configuration"
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enable Telegram Integration"
+  },
+  {
+   "description": "Encrypted Bot Token provided by @BotFather",
+   "fieldname": "bot_token",
+   "fieldtype": "Password",
+   "label": "Telegram Bot Token"
+  },
+  {
+   "description": "e.g. @my_company_erp_bot",
+   "fieldname": "bot_username",
+   "fieldtype": "Data",
+   "label": "Bot Username"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Secret token to authenticate Telegram incoming webhooks (X-Telegram-Bot-Api-Secret-Token)",
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret Token"
+  },
+  {
+   "description": "Read-only URL to set in Telegram setWebhook API",
+   "fieldname": "webhook_url",
+   "fieldtype": "Data",
+   "label": "Webhook URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "owner_config_section",
+   "fieldtype": "Section Break",
+   "label": "Notification Recipients & Reminders"
+  },
+  {
+   "description": "Telegram chat ID for the business owner",
+   "fieldname": "owner_chat_id",
+   "fieldtype": "Data",
+   "label": "Owner Telegram Chat ID"
+  },
+  {
+   "description": "Telegram chat ID or group ID for financial & overdue alerts",
+   "fieldname": "accounts_chat_id",
+   "fieldtype": "Data",
+   "label": "Accounts Team Chat ID"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "20:00:00",
+   "description": "Time to dispatch daily business summary",
+   "fieldname": "daily_summary_time",
+   "fieldtype": "Time",
+   "label": "Daily Summary Dispatch Time"
+  },
+  {
+   "default": "0",
+   "description": "Send overdue invoice reminder emails directly to customers. Disabled by default.",
+   "fieldname": "enable_customer_email_reminders",
+   "fieldtype": "Check",
+   "label": "Enable Customer Overdue Email Reminders"
+  },
+  {
+   "fieldname": "approval_toggles_section",
+   "fieldtype": "Section Break",
+   "label": "Feature Toggles"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_po_approval",
+   "fieldtype": "Check",
+   "label": "Enable Purchase Order Approvals"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_leave_approval",
+   "fieldtype": "Check",
+   "label": "Enable Leave Application Approvals"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_expense_approval",
+   "fieldtype": "Check",
+   "label": "Enable Expense Claim Approvals"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_daily_summary",
+   "fieldtype": "Check",
+   "label": "Enable Daily Summary"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_overdue_reminders",
+   "fieldtype": "Check",
+   "label": "Enable Overdue Invoice Reminders"
+  }
+ ],
+ "issingle": 1,
+ "modified": "2026-11-26 13:20:00.000000",
+ "modified_by": "Administrator",
+ "module": "Telegram Approvals Alerts",
+ "name": "Telegram Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

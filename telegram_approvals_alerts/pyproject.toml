@@ -1,0 +1,16 @@
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "telegram_approvals_alerts"
+version = "0.0.1"
+description = "Telegram alerts and document approval workflow integration for ERPNext"
+authors = [
+    { name = "Developer" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28.0",
+]

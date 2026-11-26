@@ -1,0 +1,127 @@
+"""
+Document Event Handlers for Expense Claims.
+Dispatches Telegram approval notifications with inline buttons when an Expense Claim is created.
+"""
+
+import logging
+from typing import List
+
+logger = logging.getLogger(__name__)
+
+
+def get_expense_approver_recipients(assigned_approver: str = None) -> List[dict]:
+    """
+    Find active Telegram approvers.
+    If assigned_approver is specified and mapped, returns that approver specifically.
+    Otherwise returns all active users with can_approve_expense = 1.
+    """
+    try:
+        import frappe
+
+        if assigned_approver:
+            direct_mapped = frappe.get_all(
+                "Telegram User Mapping",
+                filters={"user": assigned_approver, "is_active": 1, "can_approve_expense": 1},
+                fields=["user", "telegram_chat_id", "telegram_username"],
+            )
+            if direct_mapped:
+                return direct_mapped
+
+        # Fallback to all expense approvers
+        return frappe.get_all(
+            "Telegram User Mapping",
+            filters={"is_active": 1, "can_approve_expense": 1},
+            fields=["user", "telegram_chat_id", "telegram_username"],
+        )
+    except Exception as e:
+        logger.error("Failed to query Expense approvers: %s", e)
+        return []
+
+
+def format_expense_message(doc) -> str:
+    """Format rich HTML message for Expense Claim approval request."""
+    employee_name = (
+        getattr(doc, "employee_name", None)
+        or getattr(doc, "employee", "Unknown Employee")
+    )
+    total_amount = getattr(doc, "total_claimed_amount", 0.0)
+    remarks = getattr(doc, "remark", "") or "No remarks provided."
+
+    message = (
+        f"💼 <b>Expense Claim Approval Required</b>\n\n"
+        f"<b>Claim:</b> <code>{doc.name}</code>\n"
+        f"<b>Employee:</b> {employee_name}\n"
+        f"<b>Total Claimed:</b> <b>{total_amount:,.2f}</b>\n"
+        f"<b>Remarks:</b> <i>{remarks}</i>\n\n"
+        f"Please click below to Approve or Reject this claim:"
+    )
+    return message
+
+
+def on_expense_claim_insert(doc, method=None):
+    """Triggered on Expense Claim creation."""
+    send_expense_approval_notification(doc)
+
+
+def send_expense_approval_notification(doc):
+    """Send Telegram message with inline buttons and internal email to approvers."""
+    try:
+        import frappe
+
+        # Only notify if in Draft status
+        if getattr(doc, "docstatus", 0) != 0 or getattr(doc, "approval_status", "Draft") != "Draft":
+            return
+
+        settings = frappe.get_single("Telegram Settings")
+        if not getattr(settings, "enabled", 0) or not getattr(settings, "enable_expense_approval", 1):
+            return
+
+        assigned_approver = getattr(doc, "expense_approver", None)
+        approvers = get_expense_approver_recipients(assigned_approver)
+        if not approvers:
+            logger.info("No active Expense approvers mapped for Telegram notification.")
+            return
+
+        from telegram_approvals_alerts.services.email_service import send_approval_request_email
+        from telegram_approvals_alerts.services.telegram_service import (
+            TelegramBotClient,
+            build_approval_keyboard,
+        )
+
+        client = TelegramBotClient()
+        keyboard = build_approval_keyboard("Expense Claim", doc.name)
+        text = format_expense_message(doc)
+
+        email_recipients = []
+        for approver in approvers:
+            chat_id = approver.get("telegram_chat_id")
+            if chat_id:
+                client.send_message(
+                    chat_id=chat_id,
+                    text=text,
+                    reply_markup=keyboard,
+                    reference_doctype="Expense Claim",
+                    reference_name=doc.name,
+                )
+
+            approver_user = approver.get("user")
+            if approver_user and "@" in approver_user:
+                email_recipients.append(approver_user)
+
+        if email_recipients:
+            details_html = (
+                f"<p><b>Expense Claim:</b> {doc.name}<br>"
+                f"<b>Employee:</b> {getattr(doc, 'employee_name', getattr(doc, 'employee', 'N/A'))}<br>"
+                f"<b>Amount:</b> {getattr(doc, 'total_claimed_amount', 0.0):,.2f}</p>"
+            )
+            send_approval_request_email(
+                recipients=email_recipients,
+                doctype="Expense Claim",
+                docname=doc.name,
+                details_html=details_html,
+            )
+
+        doc.flags.telegram_notified = True
+
+    except Exception as e:
+        logger.error("Error sending Expense approval notification: %s", e)

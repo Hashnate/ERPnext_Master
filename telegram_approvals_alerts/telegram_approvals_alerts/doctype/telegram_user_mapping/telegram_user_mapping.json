@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:{user}-{telegram_chat_id}",
+ "creation": "2026-11-26 13:20:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "telegram_chat_id",
+  "telegram_username",
+  "column_break_1",
+  "is_active",
+  "can_approve_po",
+  "can_approve_leave",
+  "can_approve_expense",
+  "receive_daily_summary"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "ERPNext User",
+   "options": "User",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "Telegram user ID or private chat ID",
+   "fieldname": "telegram_chat_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Telegram Chat ID",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "Telegram handle without @ (optional)",
+   "fieldname": "telegram_username",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Telegram Username"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Active"
+  },
+  {
+   "default": "0",
+   "description": "User can approve / reject Purchase Orders via Telegram",
+   "fieldname": "can_approve_po",
+   "fieldtype": "Check",
+   "label": "Can Approve Purchase Orders"
+  },
+  {
+   "default": "0",
+   "description": "User can approve / reject Leave Applications via Telegram",
+   "fieldname": "can_approve_leave",
+   "fieldtype": "Check",
+   "label": "Can Approve Leave Applications"
+  },
+  {
+   "default": "0",
+   "description": "User can approve / reject Expense Claims via Telegram",
+   "fieldname": "can_approve_expense",
+   "fieldtype": "Check",
+   "label": "Can Approve Expense Claims"
+  },
+  {
+   "default": "0",
+   "description": "User receives daily business digest",
+   "fieldname": "receive_daily_summary",
+   "fieldtype": "Check",
+   "label": "Receive Daily Summary"
+  }
+ ],
+ "issingle": 0,
+ "istable": 0,
+ "modified": "2026-11-26 13:20:00.000000",
+ "modified_by": "Administrator",
+ "module": "Telegram Approvals Alerts",
+ "name": "Telegram User Mapping",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
