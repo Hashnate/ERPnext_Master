@@ -110,9 +110,26 @@ def compute_overtime_metrics(
 	threshold_minutes: int = 30,
 	rounding_minutes: int = 15,
 	is_holiday: bool = False,
+	inside_minutes: int | None = None,
+	scheduled_minutes: int | None = None,
 ) -> dict[str, Any]:
-	"""Calculate qualifying overtime minutes and rounded overtime hours."""
-	if is_holiday:
+	"""Calculate qualifying overtime minutes and rounded overtime hours.
+
+	When WorkSight `/timesheets` `inside_minutes` is provided, overtime is calculated from
+	actual inside-office minutes (excluding time away) rather than raw check-out span.
+	"""
+	if inside_minutes is not None:
+		inside_val = max(0, int(inside_minutes))
+		if is_holiday:
+			raw_ot_minutes = inside_val
+		else:
+			sched = (
+				int(scheduled_minutes)
+				if scheduled_minutes is not None and int(scheduled_minutes) > 0
+				else int(round(float(standard_shift_hours or 0) * 60))
+			)
+			raw_ot_minutes = max(0, inside_val - sched)
+	elif is_holiday:
 		raw_ot_minutes = max(0, int(round(float(working_hours or 0) * 60)))
 	elif shift_end_dt is not None and actual_out_dt is not None:
 		delta_seconds = (actual_out_dt - shift_end_dt).total_seconds()

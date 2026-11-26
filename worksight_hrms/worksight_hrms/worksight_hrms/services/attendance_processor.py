@@ -123,6 +123,30 @@ def _is_holiday_for_employee(employee: str, company: str, attendance_date) -> bo
 	)
 
 
+def _get_worksight_timesheet(employee: str, attendance_date) -> dict[str, Any] | None:
+	if not employee or not attendance_date:
+		return None
+	try:
+		return frappe.db.get_value(
+			"WorkSight Daily Timesheet",
+			{"employee": employee, "attendance_date": str(getdate(attendance_date))},
+			[
+				"name",
+				"inside_minutes",
+				"inside_hours",
+				"away_minutes",
+				"times_away",
+				"scheduled_minutes",
+				"is_working_day",
+				"present",
+				"measured",
+			],
+			as_dict=True,
+		)
+	except Exception:
+		return None
+
+
 def _create_late_record(
 	attendance_doc,
 	shift_doc,
@@ -185,6 +209,7 @@ def _create_overtime_record(
 	is_holiday: bool,
 	hourly_rate: float,
 	settings,
+	remarks: str | None = None,
 ) -> str | None:
 	existing = frappe.db.get_value(
 		"WorkSight Overtime Record",
@@ -227,6 +252,7 @@ def _create_overtime_record(
 			"hourly_rate": effective_rate,
 			"multiplier": multiplier,
 			"overtime_amount": overtime_amount,
+			"remarks": remarks,
 			"status": "Pending",
 		}
 	)
@@ -234,6 +260,18 @@ def _create_overtime_record(
 	if not cint(settings.require_approval_for_overtime):
 		doc.submit()
 	return doc.name
+
+
+def before_attendance_submit(doc, method=None) -> None:
+	"""Apply WorkSight `/timesheets` inside-office hours (excluding away time) before Attendance submit."""
+	settings = _get_settings()
+	if not cint(settings.enabled) or not cint(getattr(settings, "use_timesheets_for_payroll_hours", 1)):
+		return
+	if doc.status not in _WORKED_STATUSES:
+		return
+	ts = _get_worksight_timesheet(doc.employee, doc.attendance_date)
+	if ts and cint(ts.get("present")) and cint(ts.get("measured")):
+		doc.working_hours = round(cint(ts.get("inside_minutes")) / 60.0, 2)
 
 
 def evaluate_attendance(attendance_doc, settings=None) -> dict[str, Any]:
@@ -267,13 +305,39 @@ def evaluate_attendance(attendance_doc, settings=None) -> dict[str, Any]:
 		attendance_doc.attendance_date,
 	)
 
-	working_hours = flt(getattr(attendance_doc, "working_hours", 0))
-	if working_hours <= 0 and in_time and out_time and out_time > in_time:
-		working_hours = round((out_time - in_time).total_seconds() / 3600.0, 2)
+	ts = _get_worksight_timesheet(attendance_doc.employee, attendance_doc.attendance_date)
+	use_timesheet = bool(
+		ts
+		and cint(getattr(settings, "use_timesheets_for_payroll_hours", 1))
+		and cint(ts.get("present"))
+		and cint(ts.get("measured"))
+	)
+	if ts and ts.get("name"):
+		frappe.db.set_value("WorkSight Daily Timesheet", ts["name"], "attendance", attendance_doc.name)
+
+	inside_minutes: int | None = None
+	scheduled_minutes: int | None = None
+	ot_remarks: str | None = None
+	is_off_day = is_holiday
+
+	if use_timesheet and ts is not None:
+		inside_minutes = cint(ts.get("inside_minutes"))
+		scheduled_minutes = cint(ts.get("scheduled_minutes")) or None
+		working_hours = round(inside_minutes / 60.0, 2)
+		if cint(ts.get("is_working_day")) == 0:
+			is_off_day = True
+		ot_remarks = (
+			f"Calculated from WorkSight /timesheets: {inside_minutes} min inside office "
+			f"({cint(ts.get('away_minutes'))} min away excluded)."
+		)
+	else:
+		working_hours = flt(getattr(attendance_doc, "working_hours", 0))
+		if working_hours <= 0 and in_time and out_time and out_time > in_time:
+			working_hours = round((out_time - in_time).total_seconds() / 3600.0, 2)
 
 	created: dict[str, Any] = {"late_record": None, "overtime_record": None}
 
-	if cint(settings.enable_late_tracking) and shift_start_dt and in_time and not is_holiday:
+	if cint(settings.enable_late_tracking) and shift_start_dt and in_time and not is_off_day:
 		grace_minutes = (
 			cint(shift_doc.late_entry_grace_period)
 			if shift_doc
@@ -303,7 +367,9 @@ def evaluate_attendance(attendance_doc, settings=None) -> dict[str, Any]:
 			standard_shift_hours=standard_shift_hours,
 			threshold_minutes=cint(settings.overtime_threshold_minutes),
 			rounding_minutes=cint(settings.overtime_rounding_minutes),
-			is_holiday=is_holiday,
+			is_holiday=is_off_day,
+			inside_minutes=inside_minutes,
+			scheduled_minutes=scheduled_minutes,
 		)
 		if ot_metrics["has_overtime"]:
 			created["overtime_record"] = _create_overtime_record(
@@ -313,9 +379,10 @@ def evaluate_attendance(attendance_doc, settings=None) -> dict[str, Any]:
 				actual_out_dt=out_time,
 				working_hours=working_hours,
 				metrics=ot_metrics,
-				is_holiday=is_holiday,
+				is_holiday=is_off_day,
 				hourly_rate=hourly_rate,
 				settings=settings,
+				remarks=ot_remarks,
 			)
 
 	return created

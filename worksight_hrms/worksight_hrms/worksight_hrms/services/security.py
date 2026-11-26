@@ -38,7 +38,7 @@ def verify_hmac_signature(
 		return False
 	provided = signature_header.strip()
 
-	# Real WorkSight format: X-WorkSight-Signature: t=<unix time>,v1=<hex>
+	# WorkSight v1 format: X-WorkSight-Signature: t=<unix time>,v1=<hex>
 	if "t=" in provided and "v1=" in provided:
 		parts: dict[str, str] = {}
 		for item in provided.split(","):
@@ -55,7 +55,7 @@ def verify_hmac_signature(
 			return False
 		if tolerance_seconds > 0:
 			current_ts = now_ts if now_ts is not None else datetime.now(timezone.utc).timestamp()
-			if abs(current_ts - event_ts) > tolerance_seconds:
+			if abs(current_ts - event_ts) >= tolerance_seconds:
 				return False
 		signed_payload = (timestamp_str + ".").encode("utf-8") + raw_body
 		expected = hmac.new(secret.encode("utf-8"), signed_payload, hashlib.sha256).hexdigest()
@@ -105,13 +105,17 @@ def verify_timestamp_tolerance(
 	return abs(current_ts - event_ts) <= tolerance_seconds
 
 
+def _resolve_tz(tz_name: str | None):
+	clean = (tz_name or "UTC").strip()
+	return timezone.utc if clean.upper() == "UTC" else ZoneInfo(clean)
+
+
 def parse_checkin_timestamp(value: Any, target_timezone: str = "UTC") -> datetime:
 	"""Parse ISO-8601 or Unix epoch (seconds or ms) into naive datetime in target_timezone."""
 	if value is None or value == "":
 		raise ValueError("Missing check-in timestamp.")
 
-	tz_name = (target_timezone or "UTC").strip()
-	tz = timezone.utc if tz_name.upper() == "UTC" else ZoneInfo(tz_name)
+	tz = _resolve_tz(target_timezone)
 
 	if isinstance(value, (int, float)):
 		epoch = float(value)
@@ -137,6 +141,23 @@ def parse_checkin_timestamp(value: Any, target_timezone: str = "UTC") -> datetim
 	return dt
 
 
+def format_office_iso_timestamp(value: datetime | str | None, office_timezone: str = "Asia/Colombo") -> str:
+	"""Format a datetime or ISO string as ISO 8601 with office UTC offset (required by WorkSight API)."""
+	tz = _resolve_tz(office_timezone)
+	if value is None or value == "":
+		return datetime.now(tz).replace(microsecond=0).isoformat()
+	if isinstance(value, str):
+		raw = value.strip()
+		dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+	else:
+		dt = value
+	if dt.tzinfo is None:
+		dt = dt.replace(tzinfo=tz)
+	else:
+		dt = dt.astimezone(tz)
+	return dt.replace(microsecond=0).isoformat()
+
+
 def normalize_log_type(value: Any) -> str | None:
 	"""Normalize WorkSight punch direction or event name into 'IN', 'OUT', or None."""
 	if value is None:
@@ -156,7 +177,7 @@ def _pick_first(payload: dict[str, Any], keys: tuple[str, ...]) -> Any:
 
 
 def normalize_checkin_payload(payload: dict[str, Any], target_timezone: str = "UTC") -> dict[str, Any]:
-	"""Normalize real WorkSight webhook envelopes (`event` + `data`) and flat check-in payloads."""
+	"""Normalize WorkSight v1 webhook envelopes (`event` + `data`) and flat check-in payloads."""
 	if not isinstance(payload, dict):
 		raise ValueError("Check-in payload must be a JSON object.")
 
@@ -188,7 +209,7 @@ def normalize_checkin_payload(payload: dict[str, Any], target_timezone: str = "U
 		),
 	) or _pick_first(
 		payload,
-		("employeeCode", "employee_identifier", "attendance_device_id", "employee_id"),
+		("employeeCode", "employee_code", "employee_identifier", "attendance_device_id", "employee_id"),
 	)
 	if not employee_identifier:
 		raise ValueError("Missing employee identifier (e.g. data.employeeCode or attendance_device_id).")

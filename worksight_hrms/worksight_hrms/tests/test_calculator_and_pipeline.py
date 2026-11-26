@@ -68,6 +68,29 @@ class TestCalculatorAndPipeline(unittest.TestCase):
 		self.assertEqual(ot["overtime_hours"], 1.5)
 		self.assertEqual(compute_overtime_amount(1.5, 100.0, 1.5), 225.0)
 
+		# WorkSight /timesheets inside_minutes excludes away time even if checkout was late
+		no_ot_away = compute_overtime_metrics(
+			shift_end_dt=shift_end,
+			actual_out_dt=datetime(2026, 11, 26, 18, 55),
+			inside_minutes=489,
+			scheduled_minutes=540,
+			threshold_minutes=30,
+			rounding_minutes=15,
+		)
+		self.assertFalse(no_ot_away["has_overtime"])
+
+		real_ot = compute_overtime_metrics(
+			shift_end_dt=shift_end,
+			actual_out_dt=datetime(2026, 11, 26, 19, 45),
+			inside_minutes=610,
+			scheduled_minutes=540,
+			threshold_minutes=30,
+			rounding_minutes=15,
+		)
+		self.assertTrue(real_ot["has_overtime"])
+		self.assertEqual(real_ot["overtime_minutes"], 60)
+		self.assertEqual(real_ot["overtime_hours"], 1.0)
+
 	def test_end_to_end_attendance_to_payroll_sync(self):
 		if HAS_REAL_FRAPPE:
 			self.skipTest("Runs with standalone in-memory stub")

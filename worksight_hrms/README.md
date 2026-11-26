@@ -1,27 +1,35 @@
 # WorkSight HRMS (`worksight_hrms`)
 
-Frappe custom app connecting **WorkSight** (`https://worksight.hashnate.com/api/v1`) into **ERPNext + Frappe HRMS**:
+Frappe custom app connecting **WorkSight API 1.0.0** (`https://worksight.hashnate.com/api/v1`) with **ERPNext + Frappe HRMS**:
 
 ```text
-WorkSight Face Recognition & Cloud API (external)
+WorkSight Face Recognition & Cloud API (https://worksight.hashnate.com/api/v1)
    │
    ├──► Live Webhooks: POST /api/method/worksight_hrms.api.webhook.receive_checkin
-   │       • Events: employee.arrived (IN), employee.came_back (IN), employee.went_away (OUT), webhook.test
+   │       • Events: employee.arrived (IN), employee.came_back (IN),
+   │                 employee.went_away (OUT), webhook.test
    │       • Signature: X-WorkSight-Signature: t=<unix>,v1=<hmac_sha256>
    │
-   └──► Hourly / On-Demand API Sync: https://worksight.hashnate.com/api/v1
-           • GET /work-schedules  ──► HRMS Shift Type
-           • GET /employees       ──► HRMS Employee (matched via employeeCode / attendance_device_id)
-           • GET /attendance      ──► HRMS Employee Checkin + Shift Auto Attendance
+   └──► Hourly / On-Demand API Sync (worksight_client.py):
+           • GET /departments & /work-schedules ──► Department & Shift Type
+           • GET /employees                     ──► Employee (matched by employeeCode)
+           • GET /attendance                    ──► Employee Checkin (cursor + updatedSince)
+           • GET /timesheets                    ──► WorkSight Daily Timesheet (insideMinutes, awayMinutes)
+           • GET /presence/now                  ──► Live office board (IN_OFFICE / AWAY / NOT_SEEN_TODAY)
+           • PUT /employees/{employeeCode}      ──► Push / deactivate Employee in WorkSight
+           • POST /employees/{code}/enrolment-link ──► Phone face-enrolment link
+           • POST /attendance/check-in|out      ──► Manual off-site punches (+offset ISO 8601)
    │
    ▼  (Submitted Attendance)
-[2] Attendance.on_submit   ──►  WorkSight Late Record & WorkSight Overtime Record
+[2] Attendance.before_submit / on_submit
+       • Applies WorkSight /timesheets inside_hours (excluding time away) for payroll hours
+       • Creates WorkSight Late Record & WorkSight Overtime Record
    │
    ▼  (Approved / Submitted)
-[3] Payroll Sync           ──►  HRMS Additional Salary (Late Deduction / Overtime)
+[3] Payroll Sync ──► HRMS Additional Salary (Deduction / Earning)
 ```
 
-> Face recognition stays completely inside WorkSight; this app consumes check-in events and attendance APIs only.
+> Face photos, face data, and camera video remain inside WorkSight; this app consumes attendance, timesheet, and organization APIs only.
 
 ## Installation (Frappe Bench)
 
@@ -37,34 +45,16 @@ bench --site <your-site> migrate
 
 1. Open **WorkSight Settings** in Desk (`/desk/worksight-settings`).
 2. Under **WorkSight API Connection**:
-   - **WorkSight API Base URL**: `https://worksight.hashnate.com/api/v1`
+   - **WorkSight API Base URL**: `https://worksight.hashnate.com/api/v1` (HTTPS required)
    - **WorkSight API Key**: `ws_live_...`
-   - **Default Company**: e.g. `AR software`
-   - Enable **Enable Hourly WorkSight API Sync** and **Auto-Create Missing Employees from WorkSight**.
+   - **Default Company**: e.g. `Hashnate`
+   - **Away Threshold (Minutes)**: `15` (used for `/timesheets`, `/presence/now`, and webhooks)
+   - Enable **Enable Hourly WorkSight API Sync**, **Auto-Create Missing Employees from WorkSight**, and **Use WorkSight Timesheets for Payroll Hours**.
 3. Under **Webhook Security & Deduplication**:
-   - **Webhook Secret**: `whsec_...` (automatically populated if you call `register_worksight_webhook` with a public `https://` URL).
-   - **Default Webhook Timezone**: `Asia/Colombo`.
+   - **Webhook Secret**: `whsec_...` (automatically stored by `register_worksight_webhook`)
+   - **Default Office Timezone**: `Asia/Colombo`
 4. Under **Late Arrival Policy** & **Overtime Policy**:
    - Link **Late Deduction Salary Component** (`Late Deduction`) and **Overtime Salary Component** (`Overtime`).
-   - Enable **Require Approval for Overtime Records** in production so HR reviews overtime before payroll sync.
-
-## Real WorkSight Webhook Format
-
-WorkSight signs deliveries with `X-WorkSight-Signature: t=<unix time>,v1=<hex>` over `<t>.<raw_body>`:
-
-```json
-{
-  "id": "5b0c...",
-  "event": "employee.arrived",
-  "createdAt": "2026-11-26T09:03:10+05:30",
-  "data": {
-    "employeeCode": "EMP-010",
-    "fullName": "Muhni",
-    "date": "2026-11-26",
-    "at": "2026-11-26T09:02:31+05:30"
-  }
-}
-```
 
 ## Connecting Real WorkSight & Removing Dummy Data
 
@@ -73,8 +63,6 @@ From `ERPnext_Master/worksight_hrms`:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\connect_real_worksight.ps1
 ```
-
-This removes dummy test records, updates `WorkSight Settings`, and runs `worksight_hrms.worksight_hrms.services.worksight_client.sync_all` against `https://worksight.hashnate.com/api/v1`.
 
 ## Running Tests
 

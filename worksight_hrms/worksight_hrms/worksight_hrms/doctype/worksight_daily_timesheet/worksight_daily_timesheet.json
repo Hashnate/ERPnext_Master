@@ -1,0 +1,240 @@
+{
+ "actions": [],
+ "autoname": "format:{employee}-{attendance_date}",
+ "creation": "2026-11-26 13:10:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "employee_code",
+  "company",
+  "department",
+  "column_break_main",
+  "attendance_date",
+  "attendance",
+  "is_working_day",
+  "present",
+  "measured",
+  "timing_section",
+  "check_in",
+  "last_seen",
+  "scheduled_minutes",
+  "column_break_timing",
+  "inside_minutes",
+  "inside_hours",
+  "away_minutes",
+  "times_away",
+  "span_minutes",
+  "status_section",
+  "is_late",
+  "late_by_minutes",
+  "is_early_departure"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee_code",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "WorkSight Employee Code",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.department",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "attendance_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Attendance Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "attendance",
+   "fieldtype": "Link",
+   "label": "Attendance",
+   "options": "Attendance",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "is_working_day",
+   "fieldtype": "Check",
+   "label": "Is Working Day",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "present",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Present",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "True when measured from camera sightings; false for manual check-ins.",
+   "fieldname": "measured",
+   "fieldtype": "Check",
+   "label": "Camera Measured",
+   "read_only": 1
+  },
+  {
+   "fieldname": "timing_section",
+   "fieldtype": "Section Break",
+   "label": "Inside Office & Away Time (WorkSight /timesheets)"
+  },
+  {
+   "fieldname": "check_in",
+   "fieldtype": "Datetime",
+   "label": "First Check-In",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_seen",
+   "fieldtype": "Datetime",
+   "label": "Last Seen",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "scheduled_minutes",
+   "fieldtype": "Int",
+   "label": "Scheduled Minutes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_timing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "inside_minutes",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Inside Minutes",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "inside_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Inside Hours (Payroll)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "away_minutes",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Away Minutes",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "times_away",
+   "fieldtype": "Int",
+   "label": "Times Away",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "span_minutes",
+   "fieldtype": "Int",
+   "label": "Span Minutes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Schedule Flags"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_late",
+   "fieldtype": "Check",
+   "label": "Is Late",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "late_by_minutes",
+   "fieldtype": "Int",
+   "label": "Late By Minutes",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_early_departure",
+   "fieldtype": "Check",
+   "label": "Is Early Departure",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-26 13:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "WorkSight HRMS",
+ "name": "WorkSight Daily Timesheet",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "HR Manager"
+  },
+  {
+   "read": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "attendance_date",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

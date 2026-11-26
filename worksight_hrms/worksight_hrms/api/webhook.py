@@ -23,7 +23,7 @@ def _get_settings():
 
 
 def _authenticate_request(settings) -> None:
-	"""Authenticate incoming WorkSight webhook via HMAC-SHA256 or Bearer token."""
+	"""Authenticate incoming WorkSight webhook via HMAC-SHA256 (`t=...,v1=...`) or Bearer token."""
 	if not cint(settings.enabled):
 		frappe.throw(_("WorkSight integration is disabled."), frappe.PermissionError)
 
@@ -86,30 +86,37 @@ def _extract_events_from_request() -> list[dict[str, Any]]:
 def _resolve_employee(identifier: str, match_field: str) -> str | None:
 	primary = match_field if match_field in _ALLOWED_MATCH_FIELDS else "attendance_device_id"
 	search_order = [primary] + [f for f in ("attendance_device_id", "employee_number", "name") if f != primary]
-	for field in search_order:
-		employee = frappe.db.get_value("Employee", {field: identifier, "status": "Active"}, "name")
-		if employee:
-			return employee
+	candidates = [identifier]
+	upper_id = identifier.upper()
+	if upper_id != identifier:
+		candidates.append(upper_id)
+
+	for cand in candidates:
+		for field in search_order:
+			employee = frappe.db.get_value("Employee", {field: cand, "status": "Active"}, "name")
+			if employee:
+				return employee
 	return None
 
 
-def _is_rapid_duplicate(employee: str, checkin_dt, window_seconds: int) -> str | None:
+def _is_rapid_duplicate(
+	employee: str,
+	checkin_dt,
+	window_seconds: int,
+	log_type: str | None = None,
+) -> str | None:
+	filters: dict[str, Any] = {"employee": employee}
+	if log_type:
+		filters["log_type"] = log_type
+
 	if window_seconds <= 0:
-		return frappe.db.get_value(
-			"Employee Checkin",
-			{"employee": employee, "time": checkin_dt},
-			"name",
-		)
+		filters["time"] = checkin_dt
+		return frappe.db.get_value("Employee Checkin", filters, "name")
+
 	window_start = checkin_dt - timedelta(seconds=window_seconds)
 	window_end = checkin_dt + timedelta(seconds=window_seconds)
-	return frappe.db.get_value(
-		"Employee Checkin",
-		{
-			"employee": employee,
-			"time": ["between", [window_start, window_end]],
-		},
-		"name",
-	)
+	filters["time"] = ["between", [window_start, window_end]]
+	return frappe.db.get_value("Employee Checkin", filters, "name")
 
 
 def _resolve_log_type(employee: str, checkin_dt, payload_log_type: str | None, mode: str) -> str:
@@ -166,7 +173,7 @@ def _write_checkin_log(
 
 
 def process_checkin_event(raw_event: dict[str, Any], settings=None) -> dict[str, Any]:
-	"""Validate, deduplicate, and ingest a single WorkSight check-in event into Employee Checkin."""
+	"""Validate, deduplicate, and ingest a WorkSight webhook event into Employee Checkin."""
 	settings = settings or _get_settings()
 	target_tz = settings.default_timezone or frappe.db.get_single_value("System Settings", "time_zone") or "UTC"
 	normalized = normalize_checkin_payload(raw_event, target_timezone=target_tz)
@@ -211,7 +218,20 @@ def process_checkin_event(raw_event: dict[str, Any], settings=None) -> dict[str,
 		}
 
 	checkin_dt = get_datetime(normalized["checkin_time"])
-	dup_checkin = _is_rapid_duplicate(employee, checkin_dt, cint(settings.deduplication_window_seconds))
+	resolved_log_type = _resolve_log_type(
+		employee,
+		checkin_dt,
+		normalized["log_type"],
+		settings.default_log_type_mode or "Use Payload or Alternate",
+	)
+	normalized["log_type"] = resolved_log_type
+
+	dup_checkin = _is_rapid_duplicate(
+		employee,
+		checkin_dt,
+		cint(settings.deduplication_window_seconds),
+		log_type=resolved_log_type,
+	)
 	if dup_checkin:
 		log_name = _write_checkin_log(
 			normalized,
@@ -228,15 +248,7 @@ def process_checkin_event(raw_event: dict[str, Any], settings=None) -> dict[str,
 			"employee_checkin": dup_checkin,
 		}
 
-	resolved_log_type = _resolve_log_type(
-		employee,
-		checkin_dt,
-		normalized["log_type"],
-		settings.default_log_type_mode or "Use Payload or Alternate",
-	)
-	normalized["log_type"] = resolved_log_type
-
-	device_label = normalized["device_id"] or normalized["location"] or "WorkSight"
+	device_label = normalized["device_id"] or normalized["location"] or normalized.get("event") or "WorkSight"
 	checkin_doc = frappe.get_doc(
 		{
 			"doctype": "Employee Checkin",
@@ -268,7 +280,7 @@ def process_checkin_event(raw_event: dict[str, Any], settings=None) -> dict[str,
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def receive_checkin() -> dict[str, Any]:
-	"""Webhook endpoint for WorkSight face-recognition check-in events."""
+	"""Webhook endpoint for WorkSight v1 events (`employee.arrived`, `employee.went_away`, `employee.came_back`, `webhook.test`)."""
 	settings = _get_settings()
 	_authenticate_request(settings)
 	events = _extract_events_from_request()

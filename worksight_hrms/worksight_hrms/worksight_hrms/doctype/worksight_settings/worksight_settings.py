@@ -21,3 +21,5 @@ class WorkSightSettings(Document):
 			frappe.throw(_("Overtime Rounding Interval (Minutes) cannot be negative."))
 		if self.late_grace_minutes is not None and self.late_grace_minutes < 0:
 			frappe.throw(_("Default Grace Minutes cannot be negative."))
+		if self.away_after_minutes is not None and not (1 <= self.away_after_minutes <= 120):
+			frappe.throw(_("Away Threshold (Minutes) must be between 1 and 120."))
