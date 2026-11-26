@@ -65,7 +65,7 @@ if ($hlaList.Count -eq 0) {
 $empDoc = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Employee/HR-EMP-00001" -WebSession $wsSession).data
 $assignFrom = if ($empDoc.date_of_joining) { $empDoc.date_of_joining } else { "2026-11-01" }
 
-$ssFilter = [Uri]::EscapeDataString('[["company","=","AR software"],["docstatus","=",1]]')
+$ssFilter = [Uri]::EscapeDataString('[["company","=","AR software"],["docstatus","=",1],["is_active","=","Yes"]]')
 $ssList = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Salary%20Structure?filters=$ssFilter" `
     -WebSession $wsSession).data
 if ($ssList.Count -gt 0) {
@@ -85,7 +85,7 @@ if ($ssList.Count -gt 0) {
     Write-Host "Created Salary Structure: $ssName" -ForegroundColor Yellow
 }
 
-$ssaFilter = [Uri]::EscapeDataString('[["employee","=","HR-EMP-00001"],["docstatus","=",1]]')
+$ssaFilter = [Uri]::EscapeDataString(('[[ "employee","=","HR-EMP-00001" ],[ "docstatus","=",1 ],[ "from_date","<=","{0}" ]]' -f $assignFrom))
 $ssaList = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Salary%20Structure%20Assignment?filters=$ssaFilter" `
     -WebSession $wsSession).data
 if ($ssaList.Count -eq 0) {
