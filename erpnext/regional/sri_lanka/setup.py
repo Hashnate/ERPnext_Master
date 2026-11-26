@@ -246,6 +246,27 @@ def make_custom_fields(update=True):
 				fieldtype="Check",
 				insert_after="epf_number",
 			),
+			dict(
+				fieldname="sri_lanka_basic_salary",
+				label="Monthly Basic Salary (Sri Lanka Payroll)",
+				fieldtype="Currency",
+				options="salary_currency",
+				insert_after="ctc",
+			),
+			dict(
+				fieldname="sri_lanka_epf_allowances",
+				label="Monthly EPF-Liable Allowances / BRA",
+				fieldtype="Currency",
+				options="salary_currency",
+				insert_after="sri_lanka_basic_salary",
+			),
+			dict(
+				fieldname="sri_lanka_non_epf_allowances",
+				label="Monthly Non-EPF Allowances",
+				fieldtype="Currency",
+				options="salary_currency",
+				insert_after="sri_lanka_epf_allowances",
+			),
 		]
 
 	if frappe.db.exists("DocType", "Salary Component"):
@@ -300,14 +321,18 @@ def make_custom_fields(update=True):
 
 
 def add_print_formats():
-	for pf_folder in ("sri_lanka_tax_invoice", "sri_lanka_simplified_tax_invoice"):
+	for pf_folder in ("sri_lanka_tax_invoice", "sri_lanka_simplified_tax_invoice", "sri_lanka_payslip"):
 		frappe.reload_doc("regional", "print_format", pf_folder)
 
 	pf = frappe.qb.DocType("Print Format")
 	(
 		frappe.qb.update(pf)
 		.set(pf.disabled, 0)
-		.where(pf.name.isin(["Sri Lanka Tax Invoice", "Sri Lanka Simplified Tax Invoice"]))
+		.where(
+			pf.name.isin(
+				["Sri Lanka Tax Invoice", "Sri Lanka Simplified Tax Invoice", "Sri Lanka Payslip"]
+			)
+		)
 		.run()
 	)
 
@@ -334,12 +359,21 @@ def add_permissions():
 		"Sri Lanka VAT Account",
 		"Sri Lanka Payroll Settings",
 		"Sri Lanka APIT Slab",
+		"Sri Lanka Payroll Entry",
+		"Sri Lanka Payroll Employee",
 	):
-		for role in ("Accounts Manager", "Accounts User", "System Manager"):
+		for role in ("Accounts Manager", "Accounts User", "HR Manager", "HR User", "System Manager"):
 			if frappe.db.exists("Role", role):
 				add_permission(doctype, role, 0)
 				update_permission_property(doctype, role, 0, "write", 1)
 				update_permission_property(doctype, role, 0, "create", 1)
+				if doctype == "Sri Lanka Payroll Entry" and role in (
+					"Accounts Manager",
+					"HR Manager",
+					"System Manager",
+				):
+					update_permission_property(doctype, role, 0, "submit", 1)
+					update_permission_property(doctype, role, 0, "cancel", 1)
 
 
 def seed_bank_codes():

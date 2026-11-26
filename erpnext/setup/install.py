@@ -517,6 +517,11 @@ def after_app_install(app_name=None):
 		from erpnext.crm.frappe_crm_api import remove_allowed_users_on_crm_install
 
 		remove_allowed_users_on_crm_install()
+	elif app_name == "hrms":
+		from erpnext.regional.sri_lanka.setup import add_custom_roles_for_reports, make_custom_fields
+
+		make_custom_fields()
+		add_custom_roles_for_reports()
 
 
 def after_app_uninstall(app_name=None):

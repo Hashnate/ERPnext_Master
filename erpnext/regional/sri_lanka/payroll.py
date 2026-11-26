@@ -260,6 +260,243 @@ def apply_sri_lanka_payroll_deductions(doc, method=None):
 		doc.apit_tax_amount = apit.total_tax
 		_upsert_deduction_row(doc, settings.apit_component, apit.total_tax)
 
+	_recalculate_salary_slip_totals(doc)
+
+
+def _recalculate_salary_slip_totals(doc):
+	"""Recompute Salary Slip totals after Sri Lanka statutory deductions are updated."""
+	total_deduction = flt(sum(flt(row.get("amount")) for row in (doc.get("deductions") or [])), 2)
+	gross_pay = flt(doc.get("gross_pay"), 2)
+	net_pay = flt(gross_pay - total_deduction, 2)
+	exchange_rate = flt(doc.get("exchange_rate")) or 1.0
+
+	doc.total_deduction = total_deduction
+	doc.net_pay = net_pay
+	if hasattr(doc, "base_total_deduction") or "base_total_deduction" in doc:
+		doc.base_total_deduction = flt(total_deduction * exchange_rate, 2)
+	if hasattr(doc, "base_net_pay") or "base_net_pay" in doc:
+		doc.base_net_pay = flt(net_pay * exchange_rate, 2)
+	if hasattr(doc, "rounded_total") or "rounded_total" in doc:
+		doc.rounded_total = flt(round(net_pay), 2)
+	if hasattr(doc, "base_rounded_total") or "base_rounded_total" in doc:
+		doc.base_rounded_total = flt(round(net_pay * exchange_rate), 2)
+	if hasattr(doc, "set_net_total_in_words") and callable(doc.set_net_total_in_words):
+		doc.set_net_total_in_words()
+
+
+def _extract_apit_settings(settings) -> tuple[list[dict] | None, float]:
+	if not settings:
+		return None, DEFAULT_NON_RESIDENT_APIT_RATE
+
+	slabs = [
+		{"from_amount": s.from_amount, "to_amount": s.to_amount, "tax_rate": s.tax_rate}
+		for s in (settings.get("apit_slabs") or [])
+	]
+	non_res_rate = flt(settings.non_resident_apit_rate or DEFAULT_NON_RESIDENT_APIT_RATE)
+	return (slabs or None), non_res_rate
+
+
+def calculate_payroll_row(row, settings=None, precision: int = 2) -> dict:
+	"""Calculate EPF, ETF, APIT/PAYE, and Net Pay for a Sri Lanka Payroll Employee row."""
+	basic = max(flt(row.get("basic_salary")), 0.0)
+	epf_allowances = max(flt(row.get("epf_liable_allowances")), 0.0)
+	non_epf_allowances = max(flt(row.get("non_epf_allowances")), 0.0)
+	lump_sum = max(flt(row.get("lump_sum_bonus")), 0.0)
+	other_deductions = max(flt(row.get("other_deductions")), 0.0)
+
+	regular_income = flt(basic + epf_allowances + non_epf_allowances, precision)
+	gross_pay = flt(regular_income + lump_sum, precision)
+	liable_earnings = flt(basic + epf_allowances, precision)
+
+	epf_emp_rate = flt(settings.epf_employee_rate) if settings else DEFAULT_EPF_EMPLOYEE_RATE
+	epf_er_rate = flt(settings.epf_employer_rate) if settings else DEFAULT_EPF_EMPLOYER_RATE
+	etf_er_rate = flt(settings.etf_employer_rate) if settings else DEFAULT_ETF_EMPLOYER_RATE
+	epf_etf = calculate_epf_etf(
+		liable_earnings,
+		epf_employee_rate=epf_emp_rate,
+		epf_employer_rate=epf_er_rate,
+		etf_employer_rate=etf_er_rate,
+		precision=precision,
+	)
+
+	slabs, non_res_rate = _extract_apit_settings(settings)
+	apit = calculate_apit_with_lump_sum(
+		regular_monthly_income=regular_income,
+		lump_sum_amount=lump_sum,
+		tax_slabs=slabs,
+		is_non_resident=bool(row.get("is_non_resident_for_apit")),
+		non_resident_rate=non_res_rate,
+		precision=precision,
+	)
+
+	total_deduction = flt(epf_etf.epf_employee + apit.total_tax + other_deductions, precision)
+	net_pay = flt(max(gross_pay - total_deduction, 0.0), precision)
+
+	return {
+		"gross_pay": gross_pay,
+		"epf_liable_earnings": epf_etf.liable_earnings,
+		"epf_employee": epf_etf.epf_employee,
+		"epf_employer": epf_etf.epf_employer,
+		"etf_employer": epf_etf.etf_employer,
+		"apit_tax": apit.total_tax,
+		"total_deduction": total_deduction,
+		"net_pay": net_pay,
+	}
+
+
+def build_payroll_journal_accounts(doc) -> list[dict]:
+	"""Build balanced Journal Entry account lines for a Sri Lanka Payroll Entry."""
+	total_gross = flt(doc.get("total_gross_pay"), 2)
+	total_epf_emp = flt(doc.get("total_epf_employee"), 2)
+	total_epf_er = flt(doc.get("total_epf_employer"), 2)
+	total_etf_er = flt(doc.get("total_etf_employer"), 2)
+	total_apit = flt(doc.get("total_apit"), 2)
+	total_other_ded = flt(doc.get("total_other_deductions"), 2)
+	total_net = flt(doc.get("total_net_pay"), 2)
+
+	accounts: list[dict] = []
+	if total_gross > 0 and doc.get("salary_expense_account"):
+		accounts.append({"account": doc.salary_expense_account, "debit_in_account_currency": total_gross})
+	if total_epf_er > 0 and doc.get("epf_employer_expense_account"):
+		accounts.append(
+			{"account": doc.epf_employer_expense_account, "debit_in_account_currency": total_epf_er}
+		)
+	if total_etf_er > 0 and doc.get("etf_employer_expense_account"):
+		accounts.append(
+			{"account": doc.etf_employer_expense_account, "debit_in_account_currency": total_etf_er}
+		)
+
+	if total_net > 0 and doc.get("payroll_payable_account"):
+		accounts.append({"account": doc.payroll_payable_account, "credit_in_account_currency": total_net})
+	epf_total = flt(total_epf_emp + total_epf_er, 2)
+	if epf_total > 0 and doc.get("epf_payable_account"):
+		accounts.append({"account": doc.epf_payable_account, "credit_in_account_currency": epf_total})
+	if total_etf_er > 0 and doc.get("etf_payable_account"):
+		accounts.append({"account": doc.etf_payable_account, "credit_in_account_currency": total_etf_er})
+	if total_apit > 0 and doc.get("apit_payable_account"):
+		accounts.append({"account": doc.apit_payable_account, "credit_in_account_currency": total_apit})
+	other_ded_acct = doc.get("other_deductions_account") or doc.get("salary_expense_account")
+	if total_other_ded > 0 and other_ded_acct:
+		accounts.append({"account": other_ded_acct, "credit_in_account_currency": total_other_ded})
+
+	return accounts
+
+
+def get_sri_lanka_payroll_records(filters: frappe._dict) -> list[dict]:
+	"""Fetch submitted payroll rows from built-in Sri Lanka Payroll Entry and optional HRMS Salary Slips."""
+	settings = get_payroll_settings(filters.company)
+	emp_rate = flt(settings.epf_employee_rate) if settings else DEFAULT_EPF_EMPLOYEE_RATE
+	er_rate = flt(settings.epf_employer_rate) if settings else DEFAULT_EPF_EMPLOYER_RATE
+	etf_rate = flt(settings.etf_employer_rate) if settings else DEFAULT_ETF_EMPLOYER_RATE
+	slabs, non_res_rate = _extract_apit_settings(settings)
+	currency = frappe.get_cached_value("Company", filters.company, "default_currency") or "LKR"
+
+	records: list[dict] = []
+
+	if frappe.db.exists("DocType", "Sri Lanka Payroll Entry"):
+		entries = frappe.get_all(
+			"Sri Lanka Payroll Entry",
+			filters={
+				"company": filters.company,
+				"docstatus": 1,
+				"posting_date": ["between", [filters.from_date, filters.to_date]],
+			},
+			pluck="name",
+		)
+		if entries:
+			emp_rows = frappe.get_all(
+				"Sri Lanka Payroll Employee",
+				filters={"parent": ["in", entries], "parenttype": "Sri Lanka Payroll Entry"},
+				fields=[
+					"employee",
+					"employee_name",
+					"epf_number",
+					"nic_number",
+					"is_non_resident_for_apit",
+					"gross_pay",
+					"epf_liable_earnings",
+					"epf_employee",
+					"epf_employer",
+					"etf_employer",
+					"apit_tax",
+				],
+				order_by="employee asc",
+			)
+			for row in emp_rows:
+				epf_emp = flt(row.epf_employee, 2)
+				epf_er = flt(row.epf_employer, 2)
+				records.append(
+					{
+						"employee": row.employee,
+						"employee_name": row.employee_name,
+						"epf_number": row.epf_number or "",
+						"nic_number": row.nic_number or "",
+						"is_non_resident": int(bool(row.is_non_resident_for_apit)),
+						"gross_pay": flt(row.gross_pay, 2),
+						"liable_earnings": flt(row.epf_liable_earnings, 2),
+						"epf_employee": epf_emp,
+						"epf_employer": epf_er,
+						"epf_total": flt(epf_emp + epf_er, 2),
+						"etf_employer": flt(row.etf_employer, 2),
+						"apit_tax_amount": flt(row.apit_tax, 2),
+						"currency": currency,
+					}
+				)
+
+	if frappe.db.exists("DocType", "Salary Slip"):
+		slips = frappe.get_all(
+			"Salary Slip",
+			filters={
+				"company": filters.company,
+				"docstatus": 1,
+				"posting_date": ["between", [filters.from_date, filters.to_date]],
+			},
+			fields=["employee", "employee_name", "epf_liable_earnings", "gross_pay", "apit_tax_amount"],
+			order_by="employee asc",
+		)
+		for slip in slips:
+			emp = frappe.db.get_value(
+				"Employee",
+				slip.employee,
+				["epf_number", "nic_number", "is_non_resident_for_apit"],
+				as_dict=True,
+			) or {}
+			base = flt(slip.get("epf_liable_earnings") or slip.get("gross_pay"))
+			epf_etf = calculate_epf_etf(
+				base,
+				epf_employee_rate=emp_rate,
+				epf_employer_rate=er_rate,
+				etf_employer_rate=etf_rate,
+			)
+			is_non_res = bool(emp.get("is_non_resident_for_apit"))
+			apit_amt = flt(slip.get("apit_tax_amount"))
+			if not apit_amt and flt(slip.gross_pay) > 0:
+				apit_amt = calculate_apit(
+					flt(slip.gross_pay),
+					tax_slabs=slabs,
+					is_non_resident=is_non_res,
+					non_resident_rate=non_res_rate,
+				)
+			records.append(
+				{
+					"employee": slip.employee,
+					"employee_name": slip.employee_name,
+					"epf_number": emp.get("epf_number") or "",
+					"nic_number": emp.get("nic_number") or "",
+					"is_non_resident": int(is_non_res),
+					"gross_pay": flt(slip.gross_pay, 2),
+					"liable_earnings": epf_etf.liable_earnings,
+					"epf_employee": epf_etf.epf_employee,
+					"epf_employer": epf_etf.epf_employer,
+					"epf_total": epf_etf.epf_total,
+					"etf_employer": epf_etf.etf_employer,
+					"apit_tax_amount": apit_amt,
+					"currency": currency,
+				}
+			)
+
+	return records
+
 
 def _is_component_epf_liable(component_name: str | None) -> bool:
 	if not component_name:

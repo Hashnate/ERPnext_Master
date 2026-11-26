@@ -469,3 +469,61 @@ def generate_payroll_bank_file(payroll_entry_name: str, bank_format: str = "SLIP
 		"record_count": result.record_count,
 		"total_amount": result.total_amount,
 	}
+
+
+@frappe.whitelist()
+def generate_sri_lanka_payroll_bank_file(payroll_entry_name: str, bank_format: str | None = None) -> dict:
+	"""Generate a Sri Lanka salary bank upload file from a built-in Sri Lanka Payroll Entry."""
+	pe = frappe.get_doc("Sri Lanka Payroll Entry", payroll_entry_name)
+	pe.check_permission("read")
+
+	if get_region(pe.company) != COUNTRY_NAME:
+		frappe.throw(_("Bank payment file generation is only enabled for Sri Lanka companies."))
+
+	if not pe.get("company_bank_account"):
+		frappe.throw(_("Please select a Company Bank Account on {0}.").format(pe.name))
+
+	header = _get_company_bank_header(
+		company=pe.company,
+		bank_account_name=pe.company_bank_account,
+		value_date=pe.posting_date or pe.to_date or frappe.utils.nowdate(),
+		batch_reference=pe.name,
+		tx_type="SALARY",
+	)
+
+	rows: list[BankPaymentRow] = []
+	for idx, row in enumerate(pe.get("employees") or [], start=1):
+		emp = frappe.db.get_value(
+			"Employee",
+			row.employee,
+			["sri_lanka_bank_code", "sri_lanka_branch_code", "nic_number", "bank_name", "bank_ac_no"],
+			as_dict=True,
+		) or {}
+		bank_name = row.get("bank_name") or emp.get("bank_name")
+		bank_code = (
+			row.get("bank_code")
+			or emp.get("sri_lanka_bank_code")
+			or (frappe.db.get_value("Bank", bank_name, "sri_lanka_bank_code") if bank_name else "")
+		)
+		rows.append(
+			BankPaymentRow(
+				payee_name=row.get("employee_name") or row.employee,
+				bank_code=bank_code or "",
+				branch_code=row.get("branch_code") or emp.get("sri_lanka_branch_code") or "",
+				account_no=row.get("bank_account_no") or emp.get("bank_ac_no") or "",
+				amount=flt(row.get("net_pay"), 2),
+				reference=f"{pe.name}-{row.employee}",
+				nic_or_id=row.get("nic_number") or emp.get("nic_number") or "",
+				row_idx=row.get("idx") or idx,
+			)
+		)
+
+	fmt = bank_format or pe.get("bank_file_format") or "SLIPS"
+	result = generate_bank_payment_file(fmt, header, rows)
+	return {
+		"filename": result.filename,
+		"content": result.content,
+		"bank_format": result.bank_format,
+		"record_count": result.record_count,
+		"total_amount": result.total_amount,
+	}

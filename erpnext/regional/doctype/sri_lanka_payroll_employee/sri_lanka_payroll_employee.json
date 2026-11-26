@@ -1,0 +1,230 @@
+{
+ "actions": [],
+ "creation": "2026-11-26 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "nic_number",
+  "epf_number",
+  "is_non_resident_for_apit",
+  "column_break_earnings",
+  "basic_salary",
+  "epf_liable_allowances",
+  "non_epf_allowances",
+  "lump_sum_bonus",
+  "gross_pay",
+  "epf_liable_earnings",
+  "section_break_deductions",
+  "epf_employee",
+  "epf_employer",
+  "etf_employer",
+  "apit_tax",
+  "other_deductions",
+  "total_deduction",
+  "net_pay",
+  "section_break_bank",
+  "bank_name",
+  "bank_code",
+  "branch_code",
+  "bank_account_no"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.nic_number",
+   "fieldname": "nic_number",
+   "fieldtype": "Data",
+   "label": "NIC Number",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.epf_number",
+   "fieldname": "epf_number",
+   "fieldtype": "Data",
+   "label": "EPF Member No.",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fetch_from": "employee.is_non_resident_for_apit",
+   "fieldname": "is_non_resident_for_apit",
+   "fieldtype": "Check",
+   "label": "Non-Resident for APIT"
+  },
+  {
+   "fieldname": "column_break_earnings",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "basic_salary",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Basic Salary",
+   "options": "currency",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "epf_liable_allowances",
+   "fieldtype": "Currency",
+   "label": "EPF-Liable Allowances / BRA",
+   "options": "currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "non_epf_allowances",
+   "fieldtype": "Currency",
+   "label": "Non-EPF Allowances",
+   "options": "currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "lump_sum_bonus",
+   "fieldtype": "Currency",
+   "label": "Lump Sum / Bonus",
+   "options": "currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "gross_pay",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Gross Pay",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "epf_liable_earnings",
+   "fieldtype": "Currency",
+   "label": "EPF / ETF Liable Earnings",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_deductions",
+   "fieldtype": "Section Break",
+   "label": "Statutory & Other Deductions"
+  },
+  {
+   "default": "0",
+   "fieldname": "epf_employee",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "EPF Employee (8%)",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "epf_employer",
+   "fieldtype": "Currency",
+   "label": "EPF Employer (12%)",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "etf_employer",
+   "fieldtype": "Currency",
+   "label": "ETF Employer (3%)",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "apit_tax",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "APIT / PAYE",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "other_deductions",
+   "fieldtype": "Currency",
+   "label": "Other Deductions",
+   "options": "currency"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_deduction",
+   "fieldtype": "Currency",
+   "label": "Total Deduction",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "net_pay",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Net Pay",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_bank",
+   "fieldtype": "Section Break",
+   "label": "Bank Details"
+  },
+  {
+   "fetch_from": "employee.bank_name",
+   "fieldname": "bank_name",
+   "fieldtype": "Data",
+   "label": "Bank Name"
+  },
+  {
+   "fetch_from": "employee.sri_lanka_bank_code",
+   "fieldname": "bank_code",
+   "fieldtype": "Data",
+   "label": "Bank Code (4-Digit)"
+  },
+  {
+   "fetch_from": "employee.sri_lanka_branch_code",
+   "fieldname": "branch_code",
+   "fieldtype": "Data",
+   "label": "Branch Code (3-Digit)"
+  },
+  {
+   "fetch_from": "employee.bank_ac_no",
+   "fieldname": "bank_account_no",
+   "fieldtype": "Data",
+   "label": "Bank Account No."
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-26 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Regional",
+ "name": "Sri Lanka Payroll Employee",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -1,0 +1,381 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-11-26 12:00:00.000000",
+ "description": "Built-in monthly Sri Lanka payroll run with EPF, ETF, APIT/PAYE, GL posting, and bank upload file generation.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "company",
+  "currency",
+  "department",
+  "branch",
+  "column_break_header",
+  "posting_date",
+  "from_date",
+  "to_date",
+  "company_bank_account",
+  "bank_file_format",
+  "section_break_employees",
+  "employees",
+  "section_break_totals",
+  "total_employees",
+  "total_gross_pay",
+  "total_epf_liable",
+  "column_break_totals_2",
+  "total_epf_employee",
+  "total_epf_employer",
+  "total_etf_employer",
+  "column_break_totals_3",
+  "total_apit",
+  "total_other_deductions",
+  "total_net_pay",
+  "section_break_accounting",
+  "post_journal_entry",
+  "salary_expense_account",
+  "payroll_payable_account",
+  "epf_employer_expense_account",
+  "etf_employer_expense_account",
+  "column_break_accounting_2",
+  "epf_payable_account",
+  "etf_payable_account",
+  "apit_payable_account",
+  "other_deductions_account",
+  "journal_entry",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "default": "SL-PAY-.YYYY.-.MM.-.####",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "no_copy": 1,
+   "options": "SL-PAY-.YYYY.-.MM.-.####",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "company.default_currency",
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department Filter",
+   "options": "Department"
+  },
+  {
+   "fieldname": "branch",
+   "fieldtype": "Link",
+   "label": "Branch Filter",
+   "options": "Branch"
+  },
+  {
+   "fieldname": "column_break_header",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company_bank_account",
+   "fieldtype": "Link",
+   "label": "Company Bank Account",
+   "options": "Bank Account"
+  },
+  {
+   "default": "SLIPS",
+   "fieldname": "bank_file_format",
+   "fieldtype": "Select",
+   "label": "Bank Payment File Format",
+   "options": "SLIPS\nCOMBANK\nSAMPATH\nHNB\nBOC"
+  },
+  {
+   "fieldname": "section_break_employees",
+   "fieldtype": "Section Break",
+   "label": "Employee Payroll Breakdown"
+  },
+  {
+   "fieldname": "employees",
+   "fieldtype": "Table",
+   "label": "Employees",
+   "options": "Sri Lanka Payroll Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_totals",
+   "fieldtype": "Section Break",
+   "label": "Payroll Summary"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_employees",
+   "fieldtype": "Int",
+   "label": "Total Employees",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_gross_pay",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Gross Pay",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_epf_liable",
+   "fieldtype": "Currency",
+   "label": "Total EPF / ETF Liable",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_totals_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_epf_employee",
+   "fieldtype": "Currency",
+   "label": "Total EPF Employee (8%)",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_epf_employer",
+   "fieldtype": "Currency",
+   "label": "Total EPF Employer (12%)",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_etf_employer",
+   "fieldtype": "Currency",
+   "label": "Total ETF Employer (3%)",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_totals_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_apit",
+   "fieldtype": "Currency",
+   "label": "Total APIT / PAYE",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_other_deductions",
+   "fieldtype": "Currency",
+   "label": "Total Other Deductions",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_net_pay",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Net Pay",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting Integration (Optional Journal Entry)"
+  },
+  {
+   "default": "0",
+   "fieldname": "post_journal_entry",
+   "fieldtype": "Check",
+   "label": "Post Accounting Journal Entry on Submit"
+  },
+  {
+   "depends_on": "eval:doc.post_journal_entry",
+   "fieldname": "salary_expense_account",
+   "fieldtype": "Link",
+   "label": "Salary Expense Account",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval:doc.post_journal_entry",
+   "fieldname": "payroll_payable_account",
+   "fieldtype": "Link",
+   "label": "Payroll Payable Account",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval:doc.post_journal_entry",
+   "fieldname": "epf_employer_expense_account",
+   "fieldtype": "Link",
+   "label": "EPF Employer Expense Account",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval:doc.post_journal_entry",
+   "fieldname": "etf_employer_expense_account",
+   "fieldtype": "Link",
+   "label": "ETF Employer Expense Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "column_break_accounting_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.post_journal_entry",
+   "fieldname": "epf_payable_account",
+   "fieldtype": "Link",
+   "label": "EPF Payable Account",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval:doc.post_journal_entry",
+   "fieldname": "etf_payable_account",
+   "fieldtype": "Link",
+   "label": "ETF Payable Account",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval:doc.post_journal_entry",
+   "fieldname": "apit_payable_account",
+   "fieldtype": "Link",
+   "label": "APIT / PAYE Payable Account",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval:doc.post_journal_entry",
+   "description": "Optional account for other salary deductions; defaults to Salary Expense Account if left blank.",
+   "fieldname": "other_deductions_account",
+   "fieldtype": "Link",
+   "label": "Other Deductions Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "no_copy": 1,
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Sri Lanka Payroll Entry",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "icon": "money",
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-11-26 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Regional",
+ "name": "Sri Lanka Payroll Entry",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

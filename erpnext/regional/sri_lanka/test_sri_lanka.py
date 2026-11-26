@@ -43,6 +43,8 @@ def _install_frappe_stub_if_missing():
 	frappe_mod.db = types.SimpleNamespace(exists=lambda *a, **kw: False, get_value=lambda *a, **kw: None)
 	frappe_mod.has_permission = lambda *a, **kw: True
 	frappe_mod.get_all = lambda *a, **kw: []
+	frappe_mod.get_doc = lambda *a, **kw: None
+	frappe_mod.get_cached_doc = lambda *a, **kw: None
 	frappe_mod.get_cached_value = lambda *a, **kw: None
 
 	utils_mod = types.ModuleType("frappe.utils")
@@ -73,11 +75,35 @@ def _install_frappe_stub_if_missing():
 	taxes_mod.get_itemised_tax = lambda doc: {}
 
 	model_mod = types.ModuleType("frappe.model")
+	doc_mod = types.ModuleType("frappe.model.document")
+
+	class _Document:
+		def __init__(self, d=None):
+			for k, v in (d or {}).items():
+				setattr(self, k, v)
+
+		def get(self, key, default=None):
+			return getattr(self, key, default)
+
+		def __getattr__(self, key):
+			return None
+
+		def append(self, key, value):
+			lst = getattr(self, key, None)
+			if lst is None:
+				lst = []
+				setattr(self, key, lst)
+			row = _Dict(value) if isinstance(value, dict) else value
+			lst.append(row)
+			return row
+
+	doc_mod.Document = _Document
 	rename_mod = types.ModuleType("frappe.model.rename_doc")
 	rename_mod.rename_doc = lambda *a, **kw: None
 
 	sys.modules["frappe"] = frappe_mod
 	sys.modules["frappe.model"] = model_mod
+	sys.modules["frappe.model.document"] = doc_mod
 	sys.modules["frappe.model.rename_doc"] = rename_mod
 	sys.modules["frappe.utils"] = utils_mod
 	sys.modules["erpnext"] = erpnext_mod
@@ -89,17 +115,25 @@ _install_frappe_stub_if_missing()
 
 import frappe  # noqa: E402
 
+from erpnext.regional.doctype.sri_lanka_payroll_entry.sri_lanka_payroll_entry import (  # noqa: E402
+	SriLankaPayrollEntry,
+)
 from erpnext.regional.sri_lanka.bank_payment import (  # noqa: E402
 	BankPaymentHeader,
 	BankPaymentRow,
 	generate_bank_payment_file,
+	generate_sri_lanka_payroll_bank_file,
 	validate_payment_batch,
 )
 from erpnext.regional.sri_lanka.payroll import (  # noqa: E402
+	apply_sri_lanka_payroll_deductions,
+	build_payroll_journal_accounts,
 	calculate_apit,
 	calculate_apit_with_lump_sum,
 	calculate_epf_etf,
+	calculate_payroll_row,
 	get_epf_liable_earnings,
+	get_sri_lanka_payroll_records,
 )
 from erpnext.regional.sri_lanka.utils import validate_sri_lanka_report_filters  # noqa: E402
 from erpnext.regional.sri_lanka.vat import (  # noqa: E402
@@ -242,6 +276,190 @@ class TestSriLankaPayroll(unittest.TestCase):
 		self.assertEqual(bonus_res.lump_sum_tax, 7200.0)
 		self.assertEqual(bonus_res.total_tax, 7200.0)
 
+	def test_calculate_payroll_row_and_journal_accounts(self):
+		row = frappe._dict(
+			basic_salary=180000.0,
+			epf_liable_allowances=20000.0,
+			non_epf_allowances=15000.0,
+			lump_sum_bonus=0.0,
+			other_deductions=5000.0,
+			is_non_resident_for_apit=0,
+		)
+		res = calculate_payroll_row(row)
+		self.assertEqual(res["gross_pay"], 215000.0)
+		self.assertEqual(res["epf_liable_earnings"], 200000.0)
+		self.assertEqual(res["epf_employee"], 16000.0)
+		self.assertEqual(res["epf_employer"], 24000.0)
+		self.assertEqual(res["etf_employer"], 6000.0)
+		# APIT on 215,000 = (215,000 - 150,000) * 6% = 3,900
+		self.assertEqual(res["apit_tax"], 3900.0)
+		self.assertEqual(res["total_deduction"], 24900.0)
+		self.assertEqual(res["net_pay"], 190100.0)
+
+		je_doc = frappe._dict(
+			total_gross_pay=res["gross_pay"],
+			total_epf_employee=res["epf_employee"],
+			total_epf_employer=res["epf_employer"],
+			total_etf_employer=res["etf_employer"],
+			total_apit=res["apit_tax"],
+			total_other_deductions=5000.0,
+			total_net_pay=res["net_pay"],
+			salary_expense_account="Salaries - LK",
+			payroll_payable_account="Payroll Payable - LK",
+			epf_employer_expense_account="EPF Expense - LK",
+			etf_employer_expense_account="ETF Expense - LK",
+			epf_payable_account="EPF Payable - LK",
+			etf_payable_account="ETF Payable - LK",
+			apit_payable_account="APIT Payable - LK",
+		)
+		accounts = build_payroll_journal_accounts(je_doc)
+		total_debit = sum(a.get("debit_in_account_currency", 0.0) for a in accounts)
+		total_credit = sum(a.get("credit_in_account_currency", 0.0) for a in accounts)
+		self.assertEqual(round(total_debit, 2), round(total_credit, 2))
+		self.assertEqual(total_debit, 245000.0)
+
+	def test_sri_lanka_payroll_entry_validate_totals(self):
+		entry = SriLankaPayrollEntry(
+			{
+				"company": "Lanka Co",
+				"posting_date": "2026-11-30",
+				"from_date": "2026-11-01",
+				"to_date": "2026-11-30",
+				"post_journal_entry": 0,
+				"employees": [
+					frappe._dict(
+						idx=1,
+						employee="HR-EMP-0001",
+						basic_salary=100000.0,
+						epf_liable_allowances=0.0,
+						non_epf_allowances=0.0,
+						lump_sum_bonus=0.0,
+						other_deductions=0.0,
+						is_non_resident_for_apit=0,
+					),
+					frappe._dict(
+						idx=2,
+						employee="HR-EMP-0002",
+						basic_salary=200000.0,
+						epf_liable_allowances=0.0,
+						non_epf_allowances=0.0,
+						lump_sum_bonus=0.0,
+						other_deductions=0.0,
+						is_non_resident_for_apit=0,
+					),
+				],
+			}
+		)
+		entry.validate()
+		self.assertEqual(entry.total_employees, 2)
+		self.assertEqual(entry.total_gross_pay, 300000.0)
+		self.assertEqual(entry.total_epf_employee, 24000.0)
+		self.assertEqual(entry.total_epf_employer, 36000.0)
+		self.assertEqual(entry.total_etf_employer, 9000.0)
+		self.assertEqual(entry.total_apit, 3000.0)
+		self.assertEqual(entry.total_net_pay, 273000.0)
+
+		dup_entry = SriLankaPayrollEntry(
+			{
+				"company": "Lanka Co",
+				"posting_date": "2026-11-30",
+				"from_date": "2026-11-01",
+				"to_date": "2026-11-30",
+				"employees": [
+					frappe._dict(idx=1, employee="HR-EMP-0001", basic_salary=100000.0),
+					frappe._dict(idx=2, employee="HR-EMP-0001", basic_salary=100000.0),
+				],
+			}
+		)
+		with self.assertRaises(frappe.ValidationError):
+			dup_entry.validate()
+
+	def test_apply_sri_lanka_payroll_deductions_updates_net_pay(self):
+		orig_exists = frappe.db.exists
+		orig_get_value = frappe.db.get_value
+		orig_get_cached_doc = getattr(frappe, "get_cached_doc", None)
+		try:
+			settings = frappe._dict(
+				auto_calculate_statutory=1,
+				epf_employee_rate=8.0,
+				epf_employer_rate=12.0,
+				etf_employer_rate=3.0,
+				epf_employee_component="EPF Employee",
+				apit_component="APIT / PAYE",
+				non_resident_apit_rate=25.0,
+				apit_slabs=[],
+			)
+			frappe.db.exists = lambda dt, name=None: dt == "Sri Lanka Payroll Settings" and name == "Lanka Co"
+			frappe.get_cached_doc = lambda dt, name=None: settings
+			frappe.db.get_value = lambda dt, name, field, **kw: (
+				1 if (dt == "Salary Component" and name == "Basic Salary" and field == "is_epf_etf_applicable") else 0
+			)
+
+			slip = frappe._dict(
+				company="Lanka Co",
+				employee="HR-EMP-0001",
+				gross_pay=200000.0,
+				exchange_rate=1.0,
+				earnings=[frappe._dict(salary_component="Basic Salary", amount=200000.0)],
+				deductions=[],
+			)
+			slip.append = lambda key, val: slip[key].append(frappe._dict(val))
+
+			apply_sri_lanka_payroll_deductions(slip)
+			self.assertEqual(slip.epf_liable_earnings, 200000.0)
+			self.assertEqual(slip.epf_employer_contribution, 24000.0)
+			self.assertEqual(slip.etf_employer_contribution, 6000.0)
+			self.assertEqual(slip.apit_tax_amount, 3000.0)
+			# Total deduction = 16,000 (EPF 8%) + 3,000 (APIT) = 19,000; net_pay = 181,000
+			self.assertEqual(slip.total_deduction, 19000.0)
+			self.assertEqual(slip.net_pay, 181000.0)
+		finally:
+			frappe.db.exists = orig_exists
+			frappe.db.get_value = orig_get_value
+			frappe.get_cached_doc = orig_get_cached_doc
+
+	def test_get_sri_lanka_payroll_records_standalone_without_hrms(self):
+		orig_exists = frappe.db.exists
+		orig_get_all = frappe.get_all
+		orig_get_cached_value = frappe.get_cached_value
+		try:
+			frappe.db.exists = lambda dt, name=None: dt == "DocType" and name == "Sri Lanka Payroll Entry"
+			frappe.get_cached_value = lambda *a, **kw: "LKR"
+
+			def _fake_get_all(dt, **kw):
+				if dt == "Sri Lanka Payroll Entry":
+					return ["SL-PAY-2026-11-0001"]
+				if dt == "Sri Lanka Payroll Employee":
+					return [
+						frappe._dict(
+							employee="HR-EMP-0001",
+							employee_name="Nimal Perera",
+							epf_number="1001",
+							nic_number="199012345678",
+							is_non_resident_for_apit=0,
+							gross_pay=200000.0,
+							epf_liable_earnings=200000.0,
+							epf_employee=16000.0,
+							epf_employer=24000.0,
+							etf_employer=6000.0,
+							apit_tax=3000.0,
+						)
+					]
+				return []
+
+			frappe.get_all = _fake_get_all
+			records = get_sri_lanka_payroll_records(
+				frappe._dict(company="Lanka Co", from_date="2026-11-01", to_date="2026-11-30")
+			)
+			self.assertEqual(len(records), 1)
+			self.assertEqual(records[0]["epf_total"], 40000.0)
+			self.assertEqual(records[0]["etf_employer"], 6000.0)
+			self.assertEqual(records[0]["apit_tax_amount"], 3000.0)
+		finally:
+			frappe.db.exists = orig_exists
+			frappe.get_all = orig_get_all
+			frappe.get_cached_value = orig_get_cached_value
+
 
 class TestSriLankaBankPayment(unittest.TestCase):
 	def setUp(self):
@@ -314,6 +532,53 @@ class TestSriLankaBankPayment(unittest.TestCase):
 		with self.assertRaises(frappe.ValidationError):
 			validate_payment_batch(self.header, bad_rows)
 
+	def test_generate_sri_lanka_payroll_bank_file(self):
+		orig_get_doc = getattr(frappe, "get_doc", None)
+		orig_get_cached_doc = getattr(frappe, "get_cached_doc", None)
+		orig_get_value = frappe.db.get_value
+		orig_get_cached_value = frappe.get_cached_value
+		try:
+			pe = frappe._dict(
+				name="SL-PAY-2026-11-0001",
+				company="Lanka Tech Pvt Ltd",
+				company_bank_account="ComBank Main",
+				posting_date="2026-11-25",
+				bank_file_format="SLIPS",
+				employees=[
+					frappe._dict(
+						idx=1,
+						employee="HR-EMP-0001",
+						employee_name="Nimal Perera",
+						bank_name="Bank of Ceylon",
+						bank_code="7010",
+						branch_code="045",
+						bank_account_no="80012345",
+						net_pay=125000.50,
+						nic_number="199012345678",
+					)
+				],
+			)
+			pe.check_permission = lambda *a, **kw: None
+			comp_bank = frappe._dict(bank="Commercial Bank of Ceylon", sri_lanka_branch_code="001", bank_account_no="1002345678")
+
+			frappe.get_doc = lambda dt, name=None: pe
+			frappe.get_cached_doc = lambda dt, name=None: comp_bank
+			frappe.get_cached_value = lambda dt, name, field: "LKR"
+			frappe.db.get_value = lambda dt, name, field, **kw: (
+				"7056" if dt == "Bank" else {}
+			)
+
+			res = generate_sri_lanka_payroll_bank_file("SL-PAY-2026-11-0001")
+			self.assertEqual(res["bank_format"], "SLIPS")
+			self.assertEqual(res["record_count"], 1)
+			self.assertEqual(res["total_amount"], 125000.50)
+			self.assertTrue(res["filename"].startswith("SLIPS_SL-PAY-2026-11-0001_20261125"))
+		finally:
+			frappe.get_doc = orig_get_doc
+			frappe.get_cached_doc = orig_get_cached_doc
+			frappe.db.get_value = orig_get_value
+			frappe.get_cached_value = orig_get_cached_value
+
 
 class TestSriLankaMetadataJSON(unittest.TestCase):
 	def test_regional_json_files_valid(self):
@@ -324,8 +589,11 @@ class TestSriLankaMetadataJSON(unittest.TestCase):
 			repo_root / "erpnext/regional/doctype/sri_lanka_vat_account/sri_lanka_vat_account.json",
 			repo_root / "erpnext/regional/doctype/sri_lanka_payroll_settings/sri_lanka_payroll_settings.json",
 			repo_root / "erpnext/regional/doctype/sri_lanka_apit_slab/sri_lanka_apit_slab.json",
+			repo_root / "erpnext/regional/doctype/sri_lanka_payroll_entry/sri_lanka_payroll_entry.json",
+			repo_root / "erpnext/regional/doctype/sri_lanka_payroll_employee/sri_lanka_payroll_employee.json",
 			repo_root / "erpnext/regional/print_format/sri_lanka_tax_invoice/sri_lanka_tax_invoice.json",
 			repo_root / "erpnext/regional/print_format/sri_lanka_simplified_tax_invoice/sri_lanka_simplified_tax_invoice.json",
+			repo_root / "erpnext/regional/print_format/sri_lanka_payslip/sri_lanka_payslip.json",
 			repo_root / "erpnext/regional/report/sri_lanka_vat_return/sri_lanka_vat_return.json",
 			repo_root / "erpnext/regional/report/sri_lanka_epf_c_form/sri_lanka_epf_c_form.json",
 			repo_root / "erpnext/regional/report/sri_lanka_etf_return/sri_lanka_etf_return.json",
