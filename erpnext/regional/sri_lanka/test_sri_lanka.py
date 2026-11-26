@@ -374,6 +374,25 @@ class TestSriLankaPayroll(unittest.TestCase):
 		with self.assertRaises(frappe.ValidationError):
 			dup_entry.validate()
 
+		over_ded_entry = SriLankaPayrollEntry(
+			{
+				"company": "Lanka Co",
+				"posting_date": "2026-11-30",
+				"from_date": "2026-11-01",
+				"to_date": "2026-11-30",
+				"employees": [
+					frappe._dict(
+						idx=1,
+						employee="HR-EMP-0001",
+						basic_salary=50000.0,
+						other_deductions=60000.0,
+					),
+				],
+			}
+		)
+		with self.assertRaises(frappe.ValidationError):
+			over_ded_entry.validate()
+
 	def test_apply_sri_lanka_payroll_deductions_updates_net_pay(self):
 		orig_exists = frappe.db.exists
 		orig_get_value = frappe.db.get_value
@@ -422,11 +441,19 @@ class TestSriLankaPayroll(unittest.TestCase):
 		orig_exists = frappe.db.exists
 		orig_get_all = frappe.get_all
 		orig_get_cached_value = frappe.get_cached_value
+		orig_get_installed_apps = getattr(frappe, "get_installed_apps", None)
 		try:
-			frappe.db.exists = lambda dt, name=None: dt == "DocType" and name == "Sri Lanka Payroll Entry"
+			# Even if leftover Salary Slip DocType metadata exists, skip querying it when hrms is not installed
+			frappe.db.exists = lambda dt, name=None: dt == "DocType" and name in (
+				"Sri Lanka Payroll Entry",
+				"Salary Slip",
+			)
+			frappe.get_installed_apps = lambda: ["frappe", "erpnext"]
 			frappe.get_cached_value = lambda *a, **kw: "LKR"
 
 			def _fake_get_all(dt, **kw):
+				if dt == "Salary Slip":
+					raise AssertionError("Salary Slip should not be queried when hrms is not installed")
 				if dt == "Sri Lanka Payroll Entry":
 					return ["SL-PAY-2026-11-0001"]
 				if dt == "Sri Lanka Payroll Employee":
@@ -459,6 +486,11 @@ class TestSriLankaPayroll(unittest.TestCase):
 			frappe.db.exists = orig_exists
 			frappe.get_all = orig_get_all
 			frappe.get_cached_value = orig_get_cached_value
+			if orig_get_installed_apps is None:
+				if hasattr(frappe, "get_installed_apps"):
+					delattr(frappe, "get_installed_apps")
+			else:
+				frappe.get_installed_apps = orig_get_installed_apps
 
 
 class TestSriLankaBankPayment(unittest.TestCase):

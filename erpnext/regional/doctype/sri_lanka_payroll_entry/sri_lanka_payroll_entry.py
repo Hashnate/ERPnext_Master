@@ -78,6 +78,15 @@ class SriLankaPayrollEntry(Document):
 
 		for row in self.get("employees") or []:
 			computed = calculate_payroll_row(row, settings=settings)
+			if computed["total_deduction"] > computed["gross_pay"]:
+				frappe.throw(
+					_("Row #{0}: Total deductions ({1}) cannot exceed Gross Pay ({2}) for {3}.").format(
+						row.idx,
+						computed["total_deduction"],
+						computed["gross_pay"],
+						row.employee_name or row.employee,
+					)
+				)
 			row.gross_pay = computed["gross_pay"]
 			row.epf_liable_earnings = computed["epf_liable_earnings"]
 			row.epf_employee = computed["epf_employee"]
@@ -155,24 +164,28 @@ class SriLankaPayrollEntry(Document):
 		if self.branch:
 			filters["branch"] = self.branch
 
+		requested_fields = [
+			"name",
+			"employee_name",
+			"nic_number",
+			"epf_number",
+			"is_non_resident_for_apit",
+			"sri_lanka_basic_salary",
+			"sri_lanka_epf_allowances",
+			"sri_lanka_non_epf_allowances",
+			"ctc",
+			"bank_name",
+			"sri_lanka_bank_code",
+			"sri_lanka_branch_code",
+			"bank_ac_no",
+		]
+		has_column = getattr(frappe.db, "has_column", None)
+		fields = [f for f in requested_fields if not callable(has_column) or has_column("Employee", f)]
+
 		employees = frappe.get_all(
 			"Employee",
 			filters=filters,
-			fields=[
-				"name",
-				"employee_name",
-				"nic_number",
-				"epf_number",
-				"is_non_resident_for_apit",
-				"sri_lanka_basic_salary",
-				"sri_lanka_epf_allowances",
-				"sri_lanka_non_epf_allowances",
-				"ctc",
-				"bank_name",
-				"sri_lanka_bank_code",
-				"sri_lanka_branch_code",
-				"bank_ac_no",
-			],
+			fields=fields,
 			order_by="name asc",
 		)
 

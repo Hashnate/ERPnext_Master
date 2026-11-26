@@ -382,6 +382,18 @@ def build_payroll_journal_accounts(doc) -> list[dict]:
 	return accounts
 
 
+def _has_hrms_salary_slip() -> bool:
+	if not frappe.db.exists("DocType", "Salary Slip"):
+		return False
+	get_apps = getattr(frappe, "get_installed_apps", None)
+	if callable(get_apps) and "hrms" not in (get_apps() or []):
+		return False
+	table_exists = getattr(frappe.db, "table_exists", None)
+	if callable(table_exists) and not table_exists("Salary Slip"):
+		return False
+	return True
+
+
 def get_sri_lanka_payroll_records(filters: frappe._dict) -> list[dict]:
 	"""Fetch submitted payroll rows from built-in Sri Lanka Payroll Entry and optional HRMS Salary Slips."""
 	settings = get_payroll_settings(filters.company)
@@ -443,7 +455,14 @@ def get_sri_lanka_payroll_records(filters: frappe._dict) -> list[dict]:
 					}
 				)
 
-	if frappe.db.exists("DocType", "Salary Slip"):
+	if _has_hrms_salary_slip():
+		has_column = getattr(frappe.db, "has_column", None)
+		slip_fields = ["employee", "employee_name", "gross_pay"]
+		if not callable(has_column) or has_column("Salary Slip", "epf_liable_earnings"):
+			slip_fields.append("epf_liable_earnings")
+		if not callable(has_column) or has_column("Salary Slip", "apit_tax_amount"):
+			slip_fields.append("apit_tax_amount")
+
 		slips = frappe.get_all(
 			"Salary Slip",
 			filters={
@@ -451,7 +470,7 @@ def get_sri_lanka_payroll_records(filters: frappe._dict) -> list[dict]:
 				"docstatus": 1,
 				"posting_date": ["between", [filters.from_date, filters.to_date]],
 			},
-			fields=["employee", "employee_name", "epf_liable_earnings", "gross_pay", "apit_tax_amount"],
+			fields=slip_fields,
 			order_by="employee asc",
 		)
 		for slip in slips:
