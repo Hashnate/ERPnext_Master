@@ -39,42 +39,29 @@ Invoke-RestMethod -Uri "$baseUrl/api/resource/Employee/HR-EMP-00001" -Method Put
     -WebSession $wsSession -ContentType "application/json" `
     -Body (@{ holiday_list = $hlName } | ConvertTo-Json) | Out-Null
 
-# If HRMS uses Holiday List Assignment (v16/v17), ensure a submitted assignment exists
-try {
-    $hlaFilter = [Uri]::EscapeDataString('[["docstatus","=",1],["from_date","<=","2026-11-01"],["to_date",">=","2026-11-30"]]')
-    $hlaExisting = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Holiday%20List%20Assignment?filters=$hlaFilter" `
-        -WebSession $wsSession).data
-    if ($hlaExisting.Count -eq 0) {
-        $hlaBody = @{
-            applicable_for = "Company"
-            assigned_to    = "AR software"
-            holiday_list   = $hlName
-            from_date      = "2026-01-01"
-            to_date        = "2026-12-31"
-            docstatus      = 1
-        } | ConvertTo-Json
-        try {
-            Invoke-RestMethod -Uri "$baseUrl/api/resource/Holiday%20List%20Assignment" -Method Post `
-                -WebSession $wsSession -ContentType "application/json" -Body $hlaBody | Out-Null
-        } catch {
-            # Fallback if field is named 'company' instead of 'assigned_to'
-            $hlaBodyAlt = @{
-                applicable_for = "Company"
-                company        = "AR software"
-                holiday_list   = $hlName
-                from_date      = "2026-01-01"
-                to_date        = "2026-12-31"
-                docstatus      = 1
-            } | ConvertTo-Json
-            Invoke-RestMethod -Uri "$baseUrl/api/resource/Holiday%20List%20Assignment" -Method Post `
-                -WebSession $wsSession -ContentType "application/json" -Body $hlaBodyAlt | Out-Null
-        }
-    }
-} catch {
-    # Holiday List Assignment DocType not present or already handled via Company/Employee
+# 2. Inspect Holiday List Assignment schema and create assignment for HR-EMP-00001 / AR software
+$hlaMeta = (Invoke-RestMethod -Uri "$baseUrl/api/resource/DocType/Holiday%20List%20Assignment" `
+    -WebSession $wsSession).data
+$fieldNames = @($hlaMeta.fields | ForEach-Object { $_.fieldname })
+
+$hlaList = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Holiday%20List%20Assignment?limit_page_length=20" `
+    -WebSession $wsSession).data
+
+if ($hlaList.Count -eq 0) {
+    $hlaBody = @{ holiday_list = $hlName }
+    if ($fieldNames -contains "from_date") { $hlaBody["from_date"] = "2026-01-01" }
+    if ($fieldNames -contains "to_date") { $hlaBody["to_date"] = "2026-12-31" }
+    if ($fieldNames -contains "applicable_for") { $hlaBody["applicable_for"] = "Company" }
+    if ($fieldNames -contains "assigned_to") { $hlaBody["assigned_to"] = "AR software" }
+    if ($fieldNames -contains "company") { $hlaBody["company"] = "AR software" }
+    if ($hlaMeta.is_submittable -eq 1) { $hlaBody["docstatus"] = 1 }
+
+    $createdHla = Invoke-RestMethod -Uri "$baseUrl/api/resource/Holiday%20List%20Assignment" -Method Post `
+        -WebSession $wsSession -ContentType "application/json" -Body ($hlaBody | ConvertTo-Json)
+    Write-Host "Created Holiday List Assignment: $($createdHla.data.name)" -ForegroundColor Yellow
 }
 
-# 2. Create or load Salary Slip for Nov 2026
+# 3. Create or load Salary Slip for Nov 2026
 $slipFilter = [Uri]::EscapeDataString('[["employee","=","HR-EMP-00001"],["start_date","=","2026-11-01"],["end_date","=","2026-11-30"],["docstatus","!=",2]]')
 $existing = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Salary%20Slip?filters=$slipFilter" `
     -WebSession $wsSession).data
