@@ -54,6 +54,9 @@ if ($ssList.Count -eq 0) {
     $ssName = $ssList[0].name
 }
 
+$empDoc = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Employee/HR-EMP-00001" -WebSession $wsSession).data
+$assignFrom = if ($empDoc.date_of_joining) { $empDoc.date_of_joining } else { "2026-11-01" }
+
 $ssaFilter = [Uri]::EscapeDataString('[["employee","=","HR-EMP-00001"],["docstatus","=",1]]')
 $ssaList = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Salary%20Structure%20Assignment?filters=$ssaFilter" `
     -WebSession $wsSession).data
@@ -63,7 +66,7 @@ if ($ssaList.Count -eq 0) {
         salary_structure = $ssName
         company          = "AR software"
         currency         = "LKR"
-        from_date        = "2026-01-01"
+        from_date        = $assignFrom
         base             = 208000
         docstatus        = 1
     } | ConvertTo-Json

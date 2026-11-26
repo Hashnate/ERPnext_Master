@@ -61,6 +61,48 @@ if ($hlaList.Count -eq 0) {
     Write-Host "Created Holiday List Assignment: $($createdHla.data.name)" -ForegroundColor Yellow
 }
 
+# 2b. Ensure Salary Structure & Salary Structure Assignment exist for HR-EMP-00001
+$empDoc = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Employee/HR-EMP-00001" -WebSession $wsSession).data
+$assignFrom = if ($empDoc.date_of_joining) { $empDoc.date_of_joining } else { "2026-11-01" }
+
+$ssFilter = [Uri]::EscapeDataString('[["company","=","AR software"],["docstatus","=",1]]')
+$ssList = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Salary%20Structure?filters=$ssFilter" `
+    -WebSession $wsSession).data
+if ($ssList.Count -gt 0) {
+    $ssName = $ssList[0].name
+} else {
+    $ssBody = @{
+        __newname         = "WS Standard Structure"
+        company           = "AR software"
+        currency          = "LKR"
+        is_active         = "Yes"
+        payroll_frequency = "Monthly"
+        docstatus         = 1
+        earnings          = @(@{ salary_component = "Basic"; amount_based_on_formula = 1; formula = "base" })
+    } | ConvertTo-Json -Depth 4
+    $ssName = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Salary%20Structure" -Method Post `
+        -WebSession $wsSession -ContentType "application/json" -Body $ssBody).data.name
+    Write-Host "Created Salary Structure: $ssName" -ForegroundColor Yellow
+}
+
+$ssaFilter = [Uri]::EscapeDataString('[["employee","=","HR-EMP-00001"],["docstatus","=",1]]')
+$ssaList = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Salary%20Structure%20Assignment?filters=$ssaFilter" `
+    -WebSession $wsSession).data
+if ($ssaList.Count -eq 0) {
+    $ssaBody = @{
+        employee         = "HR-EMP-00001"
+        salary_structure = $ssName
+        company          = "AR software"
+        currency         = "LKR"
+        from_date        = $assignFrom
+        base             = 208000
+        docstatus        = 1
+    } | ConvertTo-Json
+    $createdSsa = Invoke-RestMethod -Uri "$baseUrl/api/resource/Salary%20Structure%20Assignment" -Method Post `
+        -WebSession $wsSession -ContentType "application/json" -Body $ssaBody
+    Write-Host "Created Salary Structure Assignment: $($createdSsa.data.name) (from $assignFrom)" -ForegroundColor Yellow
+}
+
 # 3. Create or load Salary Slip for Nov 2026
 $slipFilter = [Uri]::EscapeDataString('[["employee","=","HR-EMP-00001"],["start_date","=","2026-11-01"],["end_date","=","2026-11-30"],["docstatus","!=",2]]')
 $existing = (Invoke-RestMethod -Uri "$baseUrl/api/resource/Salary%20Slip?filters=$slipFilter" `
