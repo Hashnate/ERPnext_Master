@@ -101,6 +101,15 @@ def _resolve_in_out_times(attendance_doc) -> tuple[datetime | None, datetime | N
 
 
 def _is_holiday_for_employee(employee: str, company: str, attendance_date) -> bool:
+	att_date = getdate(attendance_date)
+	try:
+		from hrms.utils.holiday_list import get_holiday_dates_for_employee
+
+		if att_date in {getdate(d) for d in get_holiday_dates_for_employee(employee, att_date, att_date)}:
+			return True
+	except Exception:
+		pass
+
 	holiday_list = frappe.db.get_value("Employee", employee, "holiday_list")
 	if not holiday_list and company:
 		holiday_list = frappe.db.get_value("Company", company, "default_holiday_list")
@@ -109,7 +118,7 @@ def _is_holiday_for_employee(employee: str, company: str, attendance_date) -> bo
 	return bool(
 		frappe.db.exists(
 			"Holiday",
-			{"parent": holiday_list, "holiday_date": getdate(attendance_date)},
+			{"parent": holiday_list, "holiday_date": att_date},
 		)
 	)
 

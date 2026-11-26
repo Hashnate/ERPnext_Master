@@ -185,6 +185,139 @@ class TestSecurityAndWebhook(unittest.TestCase):
 			receive_checkin()
 		self.assertIn("Invalid WorkSight webhook credentials", str(ctx.exception))
 
+	def test_real_worksight_v1_signature_and_events(self):
+		if HAS_REAL_FRAPPE:
+			self.skipTest("Runs with standalone in-memory stub")
+
+		import time
+		import frappe
+		from worksight_hrms.api.webhook import receive_checkin
+		from worksight_hrms.worksight_hrms.services.security import (
+			normalize_checkin_payload,
+			parse_checkin_timestamp,
+			verify_hmac_signature,
+		)
+
+		# 1. Millisecond epoch support
+		dt_ms = parse_checkin_timestamp(1795668000000, target_timezone="UTC")
+		self.assertEqual(dt_ms.year, 2026)
+
+		# 2. Real WorkSight employee mapped by attendance_device_id = EMP-009
+		self.db.insert_doc(
+			frappe.get_doc(
+				{
+					"doctype": "Employee",
+					"name": "HR-EMP-00009",
+					"employee_name": "Afham Sathath",
+					"company": "AR software",
+					"attendance_device_id": "EMP-009",
+					"employee_number": "EMP-009",
+					"status": "Active",
+				}
+			)
+		)
+
+		now_ts = int(time.time())
+		arrived_payload = {
+			"id": "5b0c-arrived-1",
+			"event": "employee.arrived",
+			"createdAt": "2026-11-26T09:03:10+05:30",
+			"data": {
+				"employeeCode": "EMP-009",
+				"fullName": "Afham Sathath",
+				"date": "2026-11-26",
+				"at": "2026-11-26T09:02:31+05:30",
+			},
+		}
+		raw_arrived = json.dumps(arrived_payload).encode("utf-8")
+		signed_v1 = hmac.new(
+			b"super-secret-key",
+			f"{now_ts}.".encode("utf-8") + raw_arrived,
+			hashlib.sha256,
+		).hexdigest()
+		self.assertTrue(
+			verify_hmac_signature(
+				raw_arrived,
+				f"t={now_ts},v1={signed_v1}",
+				"super-secret-key",
+				tolerance_seconds=300,
+				now_ts=now_ts,
+			)
+		)
+		self.assertFalse(
+			verify_hmac_signature(
+				raw_arrived,
+				f"t={now_ts - 600},v1={signed_v1}",
+				"super-secret-key",
+				tolerance_seconds=300,
+				now_ts=now_ts,
+			)
+		)
+
+		frappe.request = types.SimpleNamespace(
+			headers={"X-WorkSight-Signature": f"t={now_ts},v1={signed_v1}"},
+			get_data=lambda as_text=False: raw_arrived.decode("utf-8") if as_text else raw_arrived,
+		)
+		res_arrived = receive_checkin()
+		self.assertTrue(res_arrived["ok"])
+		self.assertEqual(res_arrived["results"][0]["employee"], "HR-EMP-00009")
+		self.assertEqual(res_arrived["results"][0]["log_type"], "IN")
+
+		# 3. employee.went_away -> OUT
+		norm_away = normalize_checkin_payload(
+			{
+				"id": "5b0c-away-1",
+				"event": "employee.went_away",
+				"data": {"employeeCode": "EMP-009", "at": "2026-11-26T18:15:00+05:30"},
+			},
+			target_timezone="Asia/Colombo",
+		)
+		self.assertEqual(norm_away["log_type"], "OUT")
+		self.assertEqual(norm_away["checkin_time"], "2026-11-26 18:15:00")
+
+		# 4. webhook.test acknowledged without employee
+		test_payload = {"id": "wh-test-1", "event": "webhook.test", "data": {}}
+		raw_test = json.dumps(test_payload).encode("utf-8")
+		test_sig = hmac.new(
+			b"super-secret-key",
+			f"{now_ts}.".encode("utf-8") + raw_test,
+			hashlib.sha256,
+		).hexdigest()
+		frappe.request = types.SimpleNamespace(
+			headers={"X-WorkSight-Signature": f"t={now_ts},v1={test_sig}"},
+			get_data=lambda as_text=False: raw_test.decode("utf-8") if as_text else raw_test,
+		)
+		res_test = receive_checkin()
+		self.assertTrue(res_test["ok"])
+		self.assertEqual(res_test["results"][0]["status"], "test_acknowledged")
+
+	def test_worksight_client_pagination(self):
+		from unittest.mock import patch
+		from worksight_hrms.worksight_hrms.services.worksight_client import WorkSightClient
+
+		pages = [
+			{"success": True, "data": [{"employeeCode": "EMP-001"}], "page": {"nextCursor": "c2"}},
+			{"success": True, "data": [{"employeeCode": "EMP-009"}], "page": {"nextCursor": None}},
+		]
+
+		class FakeResp:
+			def __init__(self, payload):
+				self.payload = payload
+
+			def read(self):
+				return json.dumps(self.payload).encode("utf-8")
+
+			def __enter__(self):
+				return self
+
+			def __exit__(self, *args):
+				return False
+
+		with patch("urllib.request.urlopen", side_effect=[FakeResp(pages[0]), FakeResp(pages[1])]):
+			client = WorkSightClient("https://worksight.hashnate.com/api/v1", "ws_live_test")
+			rows = client.list_employees()
+			self.assertEqual([r["employeeCode"] for r in rows], ["EMP-001", "EMP-009"])
+
 
 if __name__ == "__main__":
 	unittest.main()

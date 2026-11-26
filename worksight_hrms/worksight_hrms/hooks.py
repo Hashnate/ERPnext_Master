@@ -23,6 +23,9 @@ doc_events = {
 }
 
 scheduler_events = {
+	"hourly": [
+		"worksight_hrms.worksight_hrms.services.worksight_client.scheduled_sync_from_worksight",
+	],
 	"daily": [
 		"worksight_hrms.worksight_hrms.services.payroll_sync.scheduled_sync_pending_records",
 	],

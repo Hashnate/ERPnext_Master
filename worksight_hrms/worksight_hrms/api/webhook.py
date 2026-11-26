@@ -42,14 +42,19 @@ def _authenticate_request(settings) -> None:
 	headers = request.headers or {}
 	raw_body = request.get_data() or b""
 	sig_header_name = settings.signature_header or "X-WorkSight-Signature"
+	tolerance = cint(settings.timestamp_tolerance_seconds)
 
-	hmac_ok = bool(secret) and verify_hmac_signature(raw_body, headers.get(sig_header_name), secret)
+	hmac_ok = bool(secret) and verify_hmac_signature(
+		raw_body,
+		headers.get(sig_header_name),
+		secret,
+		tolerance_seconds=tolerance,
+	)
 	bearer_ok = bool(bearer) and verify_bearer_token(headers.get("Authorization"), bearer)
 
 	if not (hmac_ok or bearer_ok):
 		frappe.throw(_("Invalid WorkSight webhook credentials."), frappe.AuthenticationError)
 
-	tolerance = cint(settings.timestamp_tolerance_seconds)
 	ts_header = headers.get("X-WorkSight-Timestamp")
 	if ts_header and not verify_timestamp_tolerance(ts_header, tolerance):
 		frappe.throw(_("Stale or invalid WorkSight webhook timestamp."), frappe.AuthenticationError)
@@ -79,11 +84,13 @@ def _extract_events_from_request() -> list[dict[str, Any]]:
 
 
 def _resolve_employee(identifier: str, match_field: str) -> str | None:
-	field = match_field if match_field in _ALLOWED_MATCH_FIELDS else "attendance_device_id"
-	employee = frappe.db.get_value("Employee", {field: identifier, "status": "Active"}, "name")
-	if not employee and field != "name":
-		employee = frappe.db.get_value("Employee", {"name": identifier, "status": "Active"}, "name")
-	return employee
+	primary = match_field if match_field in _ALLOWED_MATCH_FIELDS else "attendance_device_id"
+	search_order = [primary] + [f for f in ("attendance_device_id", "employee_number", "name") if f != primary]
+	for field in search_order:
+		employee = frappe.db.get_value("Employee", {field: identifier, "status": "Active"}, "name")
+		if employee:
+			return employee
+	return None
 
 
 def _is_rapid_duplicate(employee: str, checkin_dt, window_seconds: int) -> str | None:
@@ -114,12 +121,12 @@ def _resolve_log_type(employee: str, checkin_dt, payload_log_type: str | None, m
 	if mode == "Use Payload or Alternate" and payload_log_type:
 		return payload_log_type
 
-	day_start = checkin_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+	lookback_start = checkin_dt - timedelta(hours=16)
 	previous_log = frappe.db.get_all(
 		"Employee Checkin",
 		filters={
 			"employee": employee,
-			"time": ["between", [day_start, checkin_dt]],
+			"time": ["between", [lookback_start, checkin_dt]],
 		},
 		fields=["log_type"],
 		order_by="time desc",
@@ -142,9 +149,9 @@ def _write_checkin_log(
 			"doctype": "WorkSight Checkin Log",
 			"event_id": normalized["event_id"],
 			"status": status,
-			"checkin_time": normalized["checkin_time"],
+			"checkin_time": normalized.get("checkin_time"),
 			"log_type": normalized.get("log_type") or "",
-			"employee_identifier": normalized["employee_identifier"],
+			"employee_identifier": normalized.get("employee_identifier") or normalized.get("event") or "",
 			"matched_employee": matched_employee,
 			"employee_checkin": employee_checkin,
 			"device_id": normalized.get("device_id"),
@@ -163,6 +170,20 @@ def process_checkin_event(raw_event: dict[str, Any], settings=None) -> dict[str,
 	settings = settings or _get_settings()
 	target_tz = settings.default_timezone or frappe.db.get_single_value("System Settings", "time_zone") or "UTC"
 	normalized = normalize_checkin_payload(raw_event, target_timezone=target_tz)
+
+	if normalized.get("is_test"):
+		existing_test = frappe.db.get_value("WorkSight Checkin Log", {"event_id": normalized["event_id"]}, "name")
+		if not existing_test:
+			_write_checkin_log(
+				normalized,
+				status="Ignored",
+				error_message="WorkSight webhook.test verification event acknowledged.",
+			)
+		return {
+			"status": "test_acknowledged",
+			"event": "webhook.test",
+			"event_id": normalized["event_id"],
+		}
 
 	existing_log = frappe.db.get_value(
 		"WorkSight Checkin Log",
@@ -266,7 +287,7 @@ def receive_checkin() -> dict[str, Any]:
 			continue
 
 		results.append(res)
-		if res["status"] == "processed":
+		if res["status"] in ("processed", "test_acknowledged"):
 			processed += 1
 		elif res["status"] == "duplicate":
 			duplicates += 1
