@@ -1,0 +1,212 @@
+{
+ "app": "erpnext",
+ "charts": [],
+ "content": "[{\"id\": \"hr_hdr_1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>HR &amp; Sri Lanka Payroll</b></span>\", \"col\": 12}}, {\"id\": \"hr_sc_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee\", \"col\": 3}}, {\"id\": \"hr_sc_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sri Lanka Payroll Entry\", \"col\": 3}}, {\"id\": \"hr_sc_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sri Lanka Payroll Settings\", \"col\": 3}}, {\"id\": \"hr_sc_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sri Lanka EPF C Form\", \"col\": 3}}, {\"id\": \"hr_card_1\", \"type\": \"card\", \"data\": {\"card_name\": \"Payroll & Statutory\", \"col\": 4}}, {\"id\": \"hr_card_2\", \"type\": \"card\", \"data\": {\"card_name\": \"Employees & Organization\", \"col\": 4}}, {\"id\": \"hr_card_3\", \"type\": \"card\", \"data\": {\"card_name\": \"Banking & Accounting\", \"col\": 4}}]",
+ "creation": "2026-11-26 13:25:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "users",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "HR",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Payroll & Statutory",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sri Lanka Payroll Entry",
+   "link_count": 0,
+   "link_to": "Sri Lanka Payroll Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sri Lanka Payroll Settings",
+   "link_count": 0,
+   "link_to": "Sri Lanka Payroll Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Sri Lanka EPF C Form",
+   "link_count": 0,
+   "link_to": "Sri Lanka EPF C Form",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Sri Lanka ETF Return",
+   "link_count": 0,
+   "link_to": "Sri Lanka ETF Return",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Sri Lanka APIT Schedule",
+   "link_count": 0,
+   "link_to": "Sri Lanka APIT Schedule",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Employees & Organization",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Employee",
+   "link_count": 0,
+   "link_to": "Employee",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Department",
+   "link_count": 0,
+   "link_to": "Department",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Designation",
+   "link_count": 0,
+   "link_to": "Designation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Branch",
+   "link_count": 0,
+   "link_to": "Branch",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Holiday List",
+   "link_count": 0,
+   "link_to": "Holiday List",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Banking & Accounting",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Bank",
+   "link_count": 0,
+   "link_to": "Bank",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Bank Account",
+   "link_count": 0,
+   "link_to": "Bank Account",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Journal Entry",
+   "link_count": 0,
+   "link_to": "Journal Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-11-26 13:25:00.000000",
+ "modified_by": "Administrator",
+ "module": "Setup",
+ "name": "HR",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 15.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Employee",
+   "link_to": "Employee",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Sri Lanka Payroll Entry",
+   "link_to": "Sri Lanka Payroll Entry",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sri Lanka Payroll Settings",
+   "link_to": "Sri Lanka Payroll Settings",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "label": "Sri Lanka EPF C Form",
+   "link_to": "Sri Lanka EPF C Form",
+   "type": "Report",
+   "report_ref_doctype": "Company"
+  }
+ ],
+ "title": "HR"
+}
