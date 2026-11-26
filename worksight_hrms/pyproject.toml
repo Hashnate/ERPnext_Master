@@ -1,0 +1,33 @@
+[project]
+name = "worksight_hrms"
+authors = [
+    { name = "Hasnet", email = "dev@hasnet.local" }
+]
+description = "WorkSight to ERPNext HRMS integration: check-in webhooks, late and overtime records, and payroll inputs."
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+    "tzdata; sys_platform == 'win32'",
+]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=15.0.0"
+erpnext = ">=15.0.0"
+hrms = ">=15.0.0"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "I", "UP", "B", "RUF"]
+ignore = ["E101", "E501", "W191"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "tab"

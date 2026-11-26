@@ -1,0 +1,338 @@
+{
+ "actions": [],
+ "creation": "2026-11-26 08:40:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "webhook_security_section",
+  "webhook_secret",
+  "bearer_token",
+  "signature_header",
+  "column_break_webhook",
+  "timestamp_tolerance_seconds",
+  "deduplication_window_seconds",
+  "default_timezone",
+  "checkin_mapping_section",
+  "employee_match_field",
+  "default_log_type_mode",
+  "column_break_mapping",
+  "auto_trigger_shift_sync",
+  "late_policy_section",
+  "enable_late_tracking",
+  "late_grace_minutes",
+  "late_deduction_mode",
+  "late_salary_component",
+  "column_break_late",
+  "late_rate_per_minute",
+  "late_rate_per_hour",
+  "late_fixed_amount",
+  "late_hourly_multiplier",
+  "require_approval_for_late",
+  "overtime_policy_section",
+  "enable_overtime_tracking",
+  "overtime_threshold_minutes",
+  "overtime_rounding_minutes",
+  "overtime_salary_component",
+  "column_break_overtime",
+  "overtime_rate_mode",
+  "fixed_overtime_hourly_rate",
+  "overtime_multiplier",
+  "holiday_overtime_multiplier",
+  "require_approval_for_overtime",
+  "payroll_section",
+  "standard_working_days_per_month",
+  "standard_working_hours_per_day",
+  "column_break_payroll",
+  "auto_submit_additional_salary",
+  "overwrite_salary_structure_amount"
+ ],
+ "fields": [
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "webhook_security_section",
+   "fieldtype": "Section Break",
+   "label": "Webhook Security & Deduplication"
+  },
+  {
+   "description": "HMAC-SHA256 shared secret for verifying incoming WorkSight webhooks.",
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret"
+  },
+  {
+   "description": "Optional Bearer token accepted in the Authorization header.",
+   "fieldname": "bearer_token",
+   "fieldtype": "Password",
+   "label": "Bearer Token"
+  },
+  {
+   "default": "X-WorkSight-Signature",
+   "fieldname": "signature_header",
+   "fieldtype": "Data",
+   "label": "Signature Header"
+  },
+  {
+   "fieldname": "column_break_webhook",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "300",
+   "description": "Max age in seconds for X-WorkSight-Timestamp replay protection (0 disables timestamp check).",
+   "fieldname": "timestamp_tolerance_seconds",
+   "fieldtype": "Int",
+   "label": "Timestamp Tolerance (Seconds)"
+  },
+  {
+   "default": "60",
+   "description": "Ignore duplicate face-scan check-ins for the same employee within this window.",
+   "fieldname": "deduplication_window_seconds",
+   "fieldtype": "Int",
+   "label": "Deduplication Window (Seconds)"
+  },
+  {
+   "default": "UTC",
+   "description": "IANA timezone used when incoming check-in timestamps lack an offset (e.g. Asia/Karachi, UTC).",
+   "fieldname": "default_timezone",
+   "fieldtype": "Data",
+   "label": "Default Webhook Timezone"
+  },
+  {
+   "fieldname": "checkin_mapping_section",
+   "fieldtype": "Section Break",
+   "label": "Employee & Check-in Mapping"
+  },
+  {
+   "default": "attendance_device_id",
+   "fieldname": "employee_match_field",
+   "fieldtype": "Select",
+   "label": "Employee Match Field",
+   "options": "attendance_device_id\nname\nemployee_number"
+  },
+  {
+   "default": "Use Payload or Alternate",
+   "fieldname": "default_log_type_mode",
+   "fieldtype": "Select",
+   "label": "Log Type Resolution Mode",
+   "options": "Use Payload or Alternate\nUse Payload Only\nAlways Alternate"
+  },
+  {
+   "fieldname": "column_break_mapping",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "If enabled, sets skip_auto_attendance=0 on Employee Checkin so HRMS Shift Auto Attendance processes it.",
+   "fieldname": "auto_trigger_shift_sync",
+   "fieldtype": "Check",
+   "label": "Include in HRMS Shift Auto Attendance"
+  },
+  {
+   "fieldname": "late_policy_section",
+   "fieldtype": "Section Break",
+   "label": "Late Arrival Policy"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_late_tracking",
+   "fieldtype": "Check",
+   "label": "Enable Late Tracking"
+  },
+  {
+   "default": "15",
+   "description": "Fallback grace minutes after shift start if Shift Type does not specify a grace period.",
+   "fieldname": "late_grace_minutes",
+   "fieldtype": "Int",
+   "label": "Default Grace Minutes"
+  },
+  {
+   "default": "Hourly Rate",
+   "fieldname": "late_deduction_mode",
+   "fieldtype": "Select",
+   "label": "Late Deduction Mode",
+   "options": "Hourly Rate\nPer Minute\nPer Hour\nFixed Per Incident"
+  },
+  {
+   "fieldname": "late_salary_component",
+   "fieldtype": "Link",
+   "label": "Late Deduction Salary Component",
+   "options": "Salary Component"
+  },
+  {
+   "fieldname": "column_break_late",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.late_deduction_mode=='Per Minute'",
+   "fieldname": "late_rate_per_minute",
+   "fieldtype": "Currency",
+   "label": "Late Rate Per Minute"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.late_deduction_mode=='Per Hour'",
+   "fieldname": "late_rate_per_hour",
+   "fieldtype": "Currency",
+   "label": "Late Rate Per Hour"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.late_deduction_mode=='Fixed Per Incident'",
+   "fieldname": "late_fixed_amount",
+   "fieldtype": "Currency",
+   "label": "Late Fixed Deduction Amount"
+  },
+  {
+   "default": "1.0",
+   "depends_on": "eval:doc.late_deduction_mode=='Hourly Rate'",
+   "fieldname": "late_hourly_multiplier",
+   "fieldtype": "Float",
+   "label": "Late Hourly Multiplier"
+  },
+  {
+   "default": "0",
+   "description": "If checked, Late Records stay Pending until HR approves/submits them before payroll sync.",
+   "fieldname": "require_approval_for_late",
+   "fieldtype": "Check",
+   "label": "Require Approval for Late Records"
+  },
+  {
+   "fieldname": "overtime_policy_section",
+   "fieldtype": "Section Break",
+   "label": "Overtime Policy"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_overtime_tracking",
+   "fieldtype": "Check",
+   "label": "Enable Overtime Tracking"
+  },
+  {
+   "default": "30",
+   "description": "Minimum extra minutes beyond shift hours/end before overtime is counted.",
+   "fieldname": "overtime_threshold_minutes",
+   "fieldtype": "Int",
+   "label": "Overtime Threshold (Minutes)"
+  },
+  {
+   "default": "15",
+   "description": "Round overtime down to nearest N minutes (0 for exact minutes).",
+   "fieldname": "overtime_rounding_minutes",
+   "fieldtype": "Int",
+   "label": "Overtime Rounding Interval (Minutes)"
+  },
+  {
+   "fieldname": "overtime_salary_component",
+   "fieldtype": "Link",
+   "label": "Overtime Salary Component",
+   "options": "Salary Component"
+  },
+  {
+   "fieldname": "column_break_overtime",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "From Base Salary Hourly Rate",
+   "fieldname": "overtime_rate_mode",
+   "fieldtype": "Select",
+   "label": "Overtime Rate Mode",
+   "options": "From Base Salary Hourly Rate\nFixed Hourly Rate"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.overtime_rate_mode=='Fixed Hourly Rate'",
+   "fieldname": "fixed_overtime_hourly_rate",
+   "fieldtype": "Currency",
+   "label": "Fixed Overtime Hourly Rate"
+  },
+  {
+   "default": "1.5",
+   "fieldname": "overtime_multiplier",
+   "fieldtype": "Float",
+   "label": "Overtime Multiplier"
+  },
+  {
+   "default": "2.0",
+   "fieldname": "holiday_overtime_multiplier",
+   "fieldtype": "Float",
+   "label": "Holiday Overtime Multiplier"
+  },
+  {
+   "default": "1",
+   "description": "If checked, Overtime Records stay Pending until HR approves/submits them before payroll sync.",
+   "fieldname": "require_approval_for_overtime",
+   "fieldtype": "Check",
+   "label": "Require Approval for Overtime Records"
+  },
+  {
+   "fieldname": "payroll_section",
+   "fieldtype": "Section Break",
+   "label": "Payroll Input Settings"
+  },
+  {
+   "default": "26",
+   "fieldname": "standard_working_days_per_month",
+   "fieldtype": "Int",
+   "label": "Standard Working Days Per Month"
+  },
+  {
+   "default": "8.0",
+   "fieldname": "standard_working_hours_per_day",
+   "fieldtype": "Float",
+   "label": "Standard Working Hours Per Day"
+  },
+  {
+   "fieldname": "column_break_payroll",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Automatically submit generated Additional Salary documents instead of keeping them as Draft.",
+   "fieldname": "auto_submit_additional_salary",
+   "fieldtype": "Check",
+   "label": "Auto-Submit Additional Salary"
+  },
+  {
+   "default": "0",
+   "fieldname": "overwrite_salary_structure_amount",
+   "fieldtype": "Check",
+   "label": "Overwrite Salary Structure Amount"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-11-26 08:40:00.000000",
+ "modified_by": "Administrator",
+ "module": "WorkSight HRMS",
+ "name": "WorkSight Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

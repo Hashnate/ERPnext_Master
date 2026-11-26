@@ -1,0 +1,156 @@
+{
+ "actions": [],
+ "autoname": "format:WS-LOG-{YYYY}-{#####}",
+ "creation": "2026-11-26 08:40:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "event_id",
+  "status",
+  "checkin_time",
+  "log_type",
+  "column_break_main",
+  "employee_identifier",
+  "matched_employee",
+  "employee_checkin",
+  "device_section",
+  "device_id",
+  "location",
+  "confidence",
+  "payload_section",
+  "raw_payload",
+  "error_message"
+ ],
+ "fields": [
+  {
+   "fieldname": "event_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event ID",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "default": "Processed",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Processed\nDuplicate\nIgnored\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "checkin_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Check-in Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "log_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Log Type",
+   "options": "\nIN\nOUT",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee_identifier",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Identifier",
+   "read_only": 1
+  },
+  {
+   "fieldname": "matched_employee",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Matched Employee",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee_checkin",
+   "fieldtype": "Link",
+   "label": "Employee Checkin",
+   "options": "Employee Checkin",
+   "read_only": 1
+  },
+  {
+   "fieldname": "device_section",
+   "fieldtype": "Section Break",
+   "label": "Device Metadata"
+  },
+  {
+   "fieldname": "device_id",
+   "fieldtype": "Data",
+   "label": "Device ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "label": "Location / Gate",
+   "read_only": 1
+  },
+  {
+   "fieldname": "confidence",
+   "fieldtype": "Float",
+   "label": "Recognition Confidence",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "payload_section",
+   "fieldtype": "Section Break",
+   "label": "Payload & Diagnostics"
+  },
+  {
+   "fieldname": "raw_payload",
+   "fieldtype": "Code",
+   "label": "Raw Payload",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error Message",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-26 08:40:00.000000",
+ "modified_by": "Administrator",
+ "module": "WorkSight HRMS",
+ "name": "WorkSight Checkin Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "HR Manager"
+  },
+  {
+   "read": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}
