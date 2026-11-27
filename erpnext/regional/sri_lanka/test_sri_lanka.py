@@ -100,11 +100,24 @@ def _install_frappe_stub_if_missing():
 	doc_mod.Document = _Document
 	rename_mod = types.ModuleType("frappe.model.rename_doc")
 	rename_mod.rename_doc = lambda *a, **kw: None
+	custom_mod = types.ModuleType("frappe.custom")
+	custom_dt_mod = types.ModuleType("frappe.custom.doctype")
+	custom_cf_pkg = types.ModuleType("frappe.custom.doctype.custom_field")
+	custom_cf_mod = types.ModuleType("frappe.custom.doctype.custom_field.custom_field")
+	custom_cf_mod.create_custom_fields = lambda *a, **kw: None
+	perms_mod = types.ModuleType("frappe.permissions")
+	perms_mod.add_permission = lambda *a, **kw: None
+	perms_mod.update_permission_property = lambda *a, **kw: None
 
 	sys.modules["frappe"] = frappe_mod
 	sys.modules["frappe.model"] = model_mod
 	sys.modules["frappe.model.document"] = doc_mod
 	sys.modules["frappe.model.rename_doc"] = rename_mod
+	sys.modules["frappe.custom"] = custom_mod
+	sys.modules["frappe.custom.doctype"] = custom_dt_mod
+	sys.modules["frappe.custom.doctype.custom_field"] = custom_cf_pkg
+	sys.modules["frappe.custom.doctype.custom_field.custom_field"] = custom_cf_mod
+	sys.modules["frappe.permissions"] = perms_mod
 	sys.modules["frappe.utils"] = utils_mod
 	sys.modules["erpnext"] = erpnext_mod
 	sys.modules["erpnext.controllers"] = ctrl_mod
@@ -134,6 +147,10 @@ from erpnext.regional.sri_lanka.payroll import (  # noqa: E402
 	calculate_payroll_row,
 	get_epf_liable_earnings,
 	get_sri_lanka_payroll_records,
+)
+from erpnext.regional.sri_lanka.setup import (  # noqa: E402
+	_insert_items_after_link,
+	_insert_items_in_section,
 )
 from erpnext.regional.sri_lanka.utils import validate_sri_lanka_report_filters  # noqa: E402
 from erpnext.regional.sri_lanka.vat import (  # noqa: E402
@@ -726,6 +743,67 @@ class TestSriLankaMetadataJSON(unittest.TestCase):
 		sidebar_targets = {item.get("link_to") for item in accounts_sidebar.get("items", [])}
 		self.assertIn("Sri Lanka VAT Settings", sidebar_targets)
 		self.assertIn("Sri Lanka VAT Return", sidebar_targets)
+
+		expected_hr_labels = {
+			"Sri Lanka Payroll Entry": "Monthly Payroll Entry",
+			"Sri Lanka Payroll Settings": "Payroll Settings",
+			"Sri Lanka EPF C Form": "EPF C Form",
+			"Sri Lanka ETF Return": "ETF Return",
+			"Sri Lanka APIT Schedule": "APIT Schedule",
+		}
+		for hr_path in (
+			repo_root / "erpnext/setup/sidebar/hr/hr.json",
+			repo_root / "erpnext/workspace_sidebar/hr.json",
+		):
+			if not hr_path.exists():
+				continue
+			hr_sidebar = json.loads(hr_path.read_text(encoding="utf-8"))
+			labels = {
+				item.get("link_to"): item.get("label")
+				for item in hr_sidebar.get("items", [])
+				if item.get("link_to") in expected_hr_labels
+			}
+			self.assertEqual(labels, expected_hr_labels)
+
+		hr_workspace_path = repo_root / "erpnext/setup/workspace/hr/hr.json"
+		if hr_workspace_path.exists():
+			hr_workspace = json.loads(hr_workspace_path.read_text(encoding="utf-8"))
+			self.assertIsInstance(hr_workspace, dict)
+			link_labels = {
+				item.get("link_to"): item.get("label")
+				for item in hr_workspace.get("links", [])
+				if item.get("link_to") in expected_hr_labels
+			}
+			self.assertEqual(link_labels, expected_hr_labels)
+
+	def test_sidebar_sync_updates_existing_sri_lanka_labels(self):
+		items = [
+			{"type": "Link", "link_to": "Payroll Entry", "label": "Payroll Entry"},
+			{"type": "Link", "link_to": "Sri Lanka Payroll Entry", "label": "Sri Lanka Payroll Entry"},
+			{"type": "Section Break", "label": "Reports"},
+			{"type": "Link", "link_to": "Sri Lanka EPF C Form", "label": "Sri Lanka EPF C Form", "child": 1},
+		]
+		self.assertTrue(
+			_insert_items_after_link(
+				items,
+				"Payroll Entry",
+				[{"type": "Link", "link_to": "Sri Lanka Payroll Entry", "label": "Monthly Payroll Entry"}],
+			)
+		)
+		self.assertTrue(
+			_insert_items_in_section(
+				items,
+				"Reports",
+				[
+					{"type": "Link", "link_to": "Sri Lanka EPF C Form", "label": "EPF C Form", "child": 1},
+					{"type": "Link", "link_to": "Sri Lanka ETF Return", "label": "ETF Return", "child": 1},
+				],
+			)
+		)
+		labels = {row.get("link_to"): row.get("label") for row in items if row.get("link_to")}
+		self.assertEqual(labels["Sri Lanka Payroll Entry"], "Monthly Payroll Entry")
+		self.assertEqual(labels["Sri Lanka EPF C Form"], "EPF C Form")
+		self.assertEqual(labels["Sri Lanka ETF Return"], "ETF Return")
 
 	def test_validate_sri_lanka_report_filters(self):
 		res = validate_sri_lanka_report_filters(

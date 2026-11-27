@@ -611,12 +611,29 @@ def ensure_salary_slip_print_format():
 		)
 
 
+def _sync_existing_item_labels(items: list, new_items: list[dict]) -> bool:
+	"""Update display labels on already-present sidebar items when their link_to matches."""
+	labels_by_target = {
+		item["link_to"]: item["label"]
+		for item in new_items
+		if item.get("link_to") and item.get("label")
+	}
+	changed = False
+	for row in items:
+		target = row.get("link_to")
+		if target in labels_by_target and row.get("label") != labels_by_target[target]:
+			row["label"] = labels_by_target[target]
+			changed = True
+	return changed
+
+
 def _insert_items_in_section(items: list, section_label: str | None, new_items: list[dict]) -> bool:
-	"""Insert missing link dicts at the end of a named section (or after anchor) in a Sidebar items table."""
+	"""Insert missing link dicts at the end of a named section (or update existing labels) in a Sidebar items table."""
+	changed = _sync_existing_item_labels(items, new_items)
 	existing_targets = {row.get("link_to") for row in items if row.get("link_to")}
 	to_add = [item for item in new_items if item.get("link_to") not in existing_targets]
 	if not to_add:
-		return False
+		return changed
 
 	insert_at = len(items)
 	if section_label:
@@ -639,10 +656,12 @@ def _insert_items_in_section(items: list, section_label: str | None, new_items: 
 
 
 def _insert_items_after_link(items: list, anchor_link_to: str, new_items: list[dict]) -> bool:
+	"""Insert missing link dicts after an anchor link (or update existing labels) in a Sidebar items table."""
+	changed = _sync_existing_item_labels(items, new_items)
 	existing_targets = {row.get("link_to") for row in items if row.get("link_to")}
 	to_add = [item for item in new_items if item.get("link_to") not in existing_targets]
 	if not to_add:
-		return False
+		return changed
 
 	insert_at = len(items)
 	for idx, row in enumerate(items):
@@ -782,7 +801,7 @@ def sync_sri_lanka_ui():
 				"icon": "wallet",
 				"indent": 0,
 				"keep_closed": 0,
-				"label": "Sri Lanka Payroll Entry",
+				"label": "Monthly Payroll Entry",
 				"link_to": "Sri Lanka Payroll Entry",
 				"link_type": "DocType",
 				"open_in_new_tab": 0,
@@ -796,7 +815,7 @@ def sync_sri_lanka_ui():
 				"collapsible": 1,
 				"indent": 0,
 				"keep_closed": 0,
-				"label": "Sri Lanka EPF C Form",
+				"label": "EPF C Form",
 				"link_to": "Sri Lanka EPF C Form",
 				"link_type": "Report",
 				"open_in_new_tab": 0,
@@ -808,7 +827,7 @@ def sync_sri_lanka_ui():
 				"collapsible": 1,
 				"indent": 0,
 				"keep_closed": 0,
-				"label": "Sri Lanka ETF Return",
+				"label": "ETF Return",
 				"link_to": "Sri Lanka ETF Return",
 				"link_type": "Report",
 				"open_in_new_tab": 0,
@@ -820,7 +839,7 @@ def sync_sri_lanka_ui():
 				"collapsible": 1,
 				"indent": 0,
 				"keep_closed": 0,
-				"label": "Sri Lanka APIT Schedule",
+				"label": "APIT Schedule",
 				"link_to": "Sri Lanka APIT Schedule",
 				"link_type": "Report",
 				"open_in_new_tab": 0,
@@ -834,7 +853,7 @@ def sync_sri_lanka_ui():
 				"collapsible": 1,
 				"indent": 0,
 				"keep_closed": 0,
-				"label": "Sri Lanka Payroll Settings",
+				"label": "Payroll Settings",
 				"link_to": "Sri Lanka Payroll Settings",
 				"link_type": "DocType",
 				"open_in_new_tab": 0,

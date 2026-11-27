@@ -1,7 +1,7 @@
 {
  "app": "erpnext",
  "charts": [],
- "content": "[{\"id\": \"hr_hdr_1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>HR &amp; Sri Lanka Payroll</b></span>\", \"col\": 12}}, {\"id\": \"hr_sc_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee\", \"col\": 3}}, {\"id\": \"hr_sc_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sri Lanka Payroll Entry\", \"col\": 3}}, {\"id\": \"hr_sc_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sri Lanka Payroll Settings\", \"col\": 3}}, {\"id\": \"hr_sc_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sri Lanka EPF C Form\", \"col\": 3}}, {\"id\": \"hr_card_1\", \"type\": \"card\", \"data\": {\"card_name\": \"Payroll & Statutory\", \"col\": 4}}, {\"id\": \"hr_card_2\", \"type\": \"card\", \"data\": {\"card_name\": \"Employees & Organization\", \"col\": 4}}, {\"id\": \"hr_card_3\", \"type\": \"card\", \"data\": {\"card_name\": \"Banking & Accounting\", \"col\": 4}}]",
+ "content": "[{\"id\": \"hr_hdr_1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>HR &amp; Payroll</b></span>\", \"col\": 12}}, {\"id\": \"hr_sc_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee\", \"col\": 3}}, {\"id\": \"hr_sc_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Monthly Payroll Entry\", \"col\": 3}}, {\"id\": \"hr_sc_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Payroll Settings\", \"col\": 3}}, {\"id\": \"hr_sc_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"EPF C Form\", \"col\": 3}}, {\"id\": \"hr_card_1\", \"type\": \"card\", \"data\": {\"card_name\": \"Payroll & Statutory\", \"col\": 4}}, {\"id\": \"hr_card_2\", \"type\": \"card\", \"data\": {\"card_name\": \"Employees & Organization\", \"col\": 4}}, {\"id\": \"hr_card_3\", \"type\": \"card\", \"data\": {\"card_name\": \"Banking & Accounting\", \"col\": 4}}]",
  "creation": "2026-11-26 13:25:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -24,7 +24,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Sri Lanka Payroll Entry",
+   "label": "Monthly Payroll Entry",
    "link_count": 0,
    "link_to": "Sri Lanka Payroll Entry",
    "link_type": "DocType",
@@ -34,7 +34,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Sri Lanka Payroll Settings",
+   "label": "Payroll Settings",
    "link_count": 0,
    "link_to": "Sri Lanka Payroll Settings",
    "link_type": "DocType",
@@ -44,7 +44,7 @@
   {
    "hidden": 0,
    "is_query_report": 1,
-   "label": "Sri Lanka EPF C Form",
+   "label": "EPF C Form",
    "link_count": 0,
    "link_to": "Sri Lanka EPF C Form",
    "link_type": "Report",
@@ -54,7 +54,7 @@
   {
    "hidden": 0,
    "is_query_report": 1,
-   "label": "Sri Lanka ETF Return",
+   "label": "ETF Return",
    "link_count": 0,
    "link_to": "Sri Lanka ETF Return",
    "link_type": "Report",
@@ -64,7 +64,7 @@
   {
    "hidden": 0,
    "is_query_report": 1,
-   "label": "Sri Lanka APIT Schedule",
+   "label": "APIT Schedule",
    "link_count": 0,
    "link_to": "Sri Lanka APIT Schedule",
    "link_type": "Report",
@@ -189,20 +189,20 @@
   {
    "color": "Green",
    "doc_view": "List",
-   "label": "Sri Lanka Payroll Entry",
+   "label": "Monthly Payroll Entry",
    "link_to": "Sri Lanka Payroll Entry",
    "type": "DocType"
   },
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Sri Lanka Payroll Settings",
+   "label": "Payroll Settings",
    "link_to": "Sri Lanka Payroll Settings",
    "type": "DocType"
   },
   {
    "color": "Orange",
-   "label": "Sri Lanka EPF C Form",
+   "label": "EPF C Form",
    "link_to": "Sri Lanka EPF C Form",
    "type": "Report",
    "report_ref_doctype": "Company"
