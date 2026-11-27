@@ -492,6 +492,50 @@ class TestSriLankaPayroll(unittest.TestCase):
 			else:
 				frappe.get_installed_apps = orig_get_installed_apps
 
+	def test_get_sri_lanka_payroll_records_preserves_zero_epf_base_in_hrms(self):
+		orig_exists = frappe.db.exists
+		orig_get_all = frappe.get_all
+		orig_get_value = frappe.db.get_value
+		orig_get_cached_value = frappe.get_cached_value
+		orig_get_installed_apps = getattr(frappe, "get_installed_apps", None)
+		try:
+			frappe.db.exists = lambda dt, name=None: dt == "DocType" and name == "Salary Slip"
+			frappe.get_installed_apps = lambda: ["frappe", "erpnext", "hrms"]
+			frappe.get_cached_value = lambda *a, **kw: "LKR"
+			frappe.db.get_value = lambda *a, **kw: {}
+
+			def _fake_get_all(dt, **kw):
+				if dt == "Salary Slip":
+					return [
+						frappe._dict(
+							employee="HR-EMP-0002",
+							employee_name="Zero EPF",
+							gross_pay=50000.0,
+							epf_liable_earnings=0.0,
+							apit_tax_amount=0.0,
+						)
+					]
+				return []
+
+			frappe.get_all = _fake_get_all
+			records = get_sri_lanka_payroll_records(
+				frappe._dict(company="Lanka Co", from_date="2026-11-01", to_date="2026-11-30")
+			)
+			self.assertEqual(len(records), 1)
+			self.assertEqual(records[0]["liable_earnings"], 0.0)
+			self.assertEqual(records[0]["epf_employee"], 0.0)
+			self.assertEqual(records[0]["apit_tax_amount"], 0.0)
+		finally:
+			frappe.db.exists = orig_exists
+			frappe.get_all = orig_get_all
+			frappe.db.get_value = orig_get_value
+			frappe.get_cached_value = orig_get_cached_value
+			if orig_get_installed_apps is None:
+				if hasattr(frappe, "get_installed_apps"):
+					delattr(frappe, "get_installed_apps")
+			else:
+				frappe.get_installed_apps = orig_get_installed_apps
+
 
 class TestSriLankaBankPayment(unittest.TestCase):
 	def setUp(self):
@@ -564,6 +608,24 @@ class TestSriLankaBankPayment(unittest.TestCase):
 		with self.assertRaises(frappe.ValidationError):
 			validate_payment_batch(self.header, bad_rows)
 
+	def test_slips_rejects_account_number_over_12_digits(self):
+		long_acct_rows = [
+			BankPaymentRow(
+				payee_name="Nimal Perera",
+				bank_code="7010",
+				branch_code="045",
+				account_no="123456789012345",
+				amount=50000.0,
+				reference="SAL-001",
+				row_idx=1,
+			)
+		]
+		with self.assertRaises(frappe.ValidationError):
+			generate_bank_payment_file("SLIPS", self.header, long_acct_rows)
+		# CSV formats allow up to 20 digits
+		csv_res = generate_bank_payment_file("COMBANK", self.header, long_acct_rows)
+		self.assertEqual(csv_res.record_count, 1)
+
 	def test_generate_sri_lanka_payroll_bank_file(self):
 		orig_get_doc = getattr(frappe, "get_doc", None)
 		orig_get_cached_doc = getattr(frappe, "get_cached_doc", None)
@@ -572,6 +634,7 @@ class TestSriLankaBankPayment(unittest.TestCase):
 		try:
 			pe = frappe._dict(
 				name="SL-PAY-2026-11-0001",
+				docstatus=1,
 				company="Lanka Tech Pvt Ltd",
 				company_bank_account="ComBank Main",
 				posting_date="2026-11-25",
@@ -587,7 +650,18 @@ class TestSriLankaBankPayment(unittest.TestCase):
 						bank_account_no="80012345",
 						net_pay=125000.50,
 						nic_number="199012345678",
-					)
+					),
+					frappe._dict(
+						idx=2,
+						employee="HR-EMP-0002",
+						employee_name="Zero Net Pay",
+						bank_name="Bank of Ceylon",
+						bank_code="7010",
+						branch_code="045",
+						bank_account_no="80012346",
+						net_pay=0.0,
+						nic_number="199112345678",
+					),
 				],
 			)
 			pe.check_permission = lambda *a, **kw: None
@@ -605,6 +679,10 @@ class TestSriLankaBankPayment(unittest.TestCase):
 			self.assertEqual(res["record_count"], 1)
 			self.assertEqual(res["total_amount"], 125000.50)
 			self.assertTrue(res["filename"].startswith("SLIPS_SL-PAY-2026-11-0001_20261125"))
+
+			pe.docstatus = 0
+			with self.assertRaises(frappe.ValidationError):
+				generate_sri_lanka_payroll_bank_file("SL-PAY-2026-11-0001")
 		finally:
 			frappe.get_doc = orig_get_doc
 			frappe.get_cached_doc = orig_get_cached_doc
@@ -630,6 +708,9 @@ class TestSriLankaMetadataJSON(unittest.TestCase):
 			repo_root / "erpnext/regional/report/sri_lanka_epf_c_form/sri_lanka_epf_c_form.json",
 			repo_root / "erpnext/regional/report/sri_lanka_etf_return/sri_lanka_etf_return.json",
 			repo_root / "erpnext/regional/report/sri_lanka_apit_schedule/sri_lanka_apit_schedule.json",
+			repo_root / "erpnext/dock/erpnext/erpnext.json",
+			repo_root / "erpnext/accounts/sidebar/accounts/accounts.json",
+			repo_root / "erpnext/accounts/workspace/accounting/accounting.json",
 		]
 		for path in json_paths:
 			self.assertTrue(path.exists(), f"Missing metadata file: {path}")
@@ -640,6 +721,11 @@ class TestSriLankaMetadataJSON(unittest.TestCase):
 		tax_data = json.loads((repo_root / "erpnext/setup/setup_wizard/data/country_wise_tax.json").read_text(encoding="utf-8"))
 		self.assertIn("Sri Lanka", tax_data)
 		self.assertEqual(tax_data["Sri Lanka"]["Sri Lanka VAT 18%"]["tax_rate"], 18.0)
+
+		accounts_sidebar = json.loads((repo_root / "erpnext/accounts/sidebar/accounts/accounts.json").read_text(encoding="utf-8"))
+		sidebar_targets = {item.get("link_to") for item in accounts_sidebar.get("items", [])}
+		self.assertIn("Sri Lanka VAT Settings", sidebar_targets)
+		self.assertIn("Sri Lanka VAT Return", sidebar_targets)
 
 	def test_validate_sri_lanka_report_filters(self):
 		res = validate_sri_lanka_report_filters(

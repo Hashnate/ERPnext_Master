@@ -52,7 +52,7 @@ frappe.ui.form.on("Sri Lanka Payroll Entry", {
 			});
 		}
 
-		if (!frm.is_new() && (frm.doc.employees || []).length) {
+		if (frm.doc.docstatus === 1 && (frm.doc.employees || []).length) {
 			frm.add_custom_button(__("Download Bank Payment File"), function () {
 				frappe.prompt(
 					[
@@ -94,4 +94,23 @@ frappe.ui.form.on("Sri Lanka Payroll Entry", {
 			});
 		}
 	},
+});
+
+function recalculate_payroll_entry(frm) {
+	if (frm.doc.docstatus !== 0 || !frm.doc.company) {
+		return;
+	}
+	frm.call("recalculate_payroll").then(() => {
+		frm.refresh_fields();
+	});
+}
+
+frappe.ui.form.on("Sri Lanka Payroll Employee", {
+	basic_salary: (frm) => recalculate_payroll_entry(frm),
+	epf_liable_allowances: (frm) => recalculate_payroll_entry(frm),
+	non_epf_allowances: (frm) => recalculate_payroll_entry(frm),
+	lump_sum_bonus: (frm) => recalculate_payroll_entry(frm),
+	other_deductions: (frm) => recalculate_payroll_entry(frm),
+	is_non_resident_for_apit: (frm) => recalculate_payroll_entry(frm),
+	employees_remove: (frm) => recalculate_payroll_entry(frm),
 });

@@ -518,10 +518,19 @@ def after_app_install(app_name=None):
 
 		remove_allowed_users_on_crm_install()
 	elif app_name == "hrms":
-		from erpnext.regional.sri_lanka.setup import add_custom_roles_for_reports, make_custom_fields
+		from erpnext.regional.sri_lanka.setup import (
+			add_custom_roles_for_reports,
+			ensure_salary_slip_print_format,
+			make_custom_fields,
+			seed_salary_components,
+			sync_sri_lanka_ui,
+		)
 
 		make_custom_fields()
 		add_custom_roles_for_reports()
+		seed_salary_components()
+		ensure_salary_slip_print_format()
+		sync_sri_lanka_ui()
 
 
 def after_app_uninstall(app_name=None):

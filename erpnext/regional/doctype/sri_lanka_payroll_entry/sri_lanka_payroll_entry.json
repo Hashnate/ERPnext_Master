@@ -171,7 +171,7 @@
    "default": "0",
    "fieldname": "total_epf_employee",
    "fieldtype": "Currency",
-   "label": "Total EPF Employee (8%)",
+   "label": "Total EPF Employee",
    "options": "currency",
    "read_only": 1
   },
@@ -179,7 +179,7 @@
    "default": "0",
    "fieldname": "total_epf_employer",
    "fieldtype": "Currency",
-   "label": "Total EPF Employer (12%)",
+   "label": "Total EPF Employer",
    "options": "currency",
    "read_only": 1
   },
@@ -187,7 +187,7 @@
    "default": "0",
    "fieldname": "total_etf_employer",
    "fieldtype": "Currency",
-   "label": "Total ETF Employer (3%)",
+   "label": "Total ETF Employer",
    "options": "currency",
    "read_only": 1
   },

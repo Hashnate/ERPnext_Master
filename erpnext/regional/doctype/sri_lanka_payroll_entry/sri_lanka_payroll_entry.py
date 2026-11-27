@@ -222,3 +222,8 @@ class SriLankaPayrollEntry(Document):
 
 		self.calculate_all_rows()
 		return added
+
+	@frappe.whitelist()
+	def recalculate_payroll(self):
+		"""Recalculate statutory deductions and summary totals for client-side edits."""
+		self.calculate_all_rows()

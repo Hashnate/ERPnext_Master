@@ -109,6 +109,7 @@ after_install = "erpnext.setup.install.after_install"
 
 after_app_install = "erpnext.setup.install.after_app_install"
 after_app_uninstall = "erpnext.setup.install.after_app_uninstall"
+after_migrate = ["erpnext.regional.sri_lanka.setup.after_migrate_sri_lanka"]
 
 # patches that must stop the migration when they fail, even with `bench migrate --skip-failing`
 never_skip_patches = [

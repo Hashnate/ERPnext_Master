@@ -480,7 +480,8 @@ def get_sri_lanka_payroll_records(filters: frappe._dict) -> list[dict]:
 				["epf_number", "nic_number", "is_non_resident_for_apit"],
 				as_dict=True,
 			) or {}
-			base = flt(slip.get("epf_liable_earnings") or slip.get("gross_pay"))
+			epf_base = slip.get("epf_liable_earnings")
+			base = flt(slip.get("gross_pay") if epf_base is None else epf_base)
 			epf_etf = calculate_epf_etf(
 				base,
 				epf_employee_rate=emp_rate,
@@ -488,8 +489,9 @@ def get_sri_lanka_payroll_records(filters: frappe._dict) -> list[dict]:
 				etf_employer_rate=etf_rate,
 			)
 			is_non_res = bool(emp.get("is_non_resident_for_apit"))
-			apit_amt = flt(slip.get("apit_tax_amount"))
-			if not apit_amt and flt(slip.gross_pay) > 0:
+			raw_apit = slip.get("apit_tax_amount")
+			apit_amt = flt(raw_apit)
+			if raw_apit is None and flt(slip.gross_pay) > 0:
 				apit_amt = calculate_apit(
 					flt(slip.gross_pay),
 					tax_slabs=slabs,

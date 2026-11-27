@@ -80,9 +80,14 @@ def _amount_in_cents(amount: float) -> int:
 	return round(flt(amount, 2) * 100)
 
 
-def validate_payment_batch(header: BankPaymentHeader, rows: list[BankPaymentRow]) -> list[str]:
+def validate_payment_batch(
+	header: BankPaymentHeader,
+	rows: list[BankPaymentRow],
+	bank_format: str | None = None,
+) -> list[str]:
 	"""Validate Sri Lanka bank payment batch header and payee rows; raise on errors."""
 	errors: list[str] = []
+	is_slips = (bank_format or "").strip().upper() == "SLIPS"
 
 	if not _clean_text(header.company_name, 50):
 		errors.append(_("Company name is required."))
@@ -98,6 +103,8 @@ def validate_payment_batch(header: BankPaymentHeader, rows: list[BankPaymentRow]
 	comp_acct = _clean_digits(header.company_account_no)
 	if not comp_acct:
 		errors.append(_("Company Bank Account Number is required."))
+	elif is_slips and len(comp_acct) > 12:
+		errors.append(_("Company Bank Account Number '{0}' exceeds 12 digits required by SLIPS.").format(header.company_account_no))
 
 	try:
 		_format_value_date(header.value_date)
@@ -125,6 +132,12 @@ def validate_payment_batch(header: BankPaymentHeader, rows: list[BankPaymentRow]
 		acct_no = _clean_digits(row.account_no)
 		if not acct_no or len(acct_no) > 20:
 			errors.append(_("Row #{0}: Valid numeric Account Number is required.").format(row_no))
+		elif is_slips and len(acct_no) > 12:
+			errors.append(
+				_("Row #{0}: Account Number '{1}' exceeds 12 digits required by SLIPS.").format(
+					row_no, row.account_no
+				)
+			)
 
 		if flt(row.amount, 2) <= 0:
 			errors.append(_("Row #{0}: Payment amount must be greater than 0.").format(row_no))
@@ -319,7 +332,7 @@ def generate_bank_payment_file(
 			)
 		)
 
-	validate_payment_batch(header, rows)
+	validate_payment_batch(header, rows, bank_format=fmt)
 	filename, content = BANK_FORMATTERS[fmt](header, rows)
 	total_amount = flt(sum(flt(r.amount, 2) for r in rows), 2)
 
@@ -406,6 +419,9 @@ def generate_payroll_bank_file(payroll_entry_name: str, bank_format: str = "SLIP
 	pe = frappe.get_doc("Payroll Entry", payroll_entry_name)
 	pe.check_permission("read")
 
+	if pe.docstatus != 1:
+		frappe.throw(_("Payroll Entry {0} must be submitted before generating a bank payment file.").format(pe.name))
+
 	if get_region(pe.company) != COUNTRY_NAME:
 		frappe.throw(_("Bank payment file generation is only enabled for Sri Lanka companies."))
 
@@ -439,6 +455,8 @@ def generate_payroll_bank_file(payroll_entry_name: str, bank_format: str = "SLIP
 
 	rows: list[BankPaymentRow] = []
 	for idx, slip in enumerate(slips, start=1):
+		if flt(slip.net_pay, 2) <= 0:
+			continue
 		emp = frappe.db.get_value(
 			"Employee",
 			slip.employee,
@@ -477,6 +495,13 @@ def generate_sri_lanka_payroll_bank_file(payroll_entry_name: str, bank_format: s
 	pe = frappe.get_doc("Sri Lanka Payroll Entry", payroll_entry_name)
 	pe.check_permission("read")
 
+	if pe.docstatus != 1:
+		frappe.throw(
+			_("Sri Lanka Payroll Entry {0} must be submitted before generating a bank payment file.").format(
+				pe.name
+			)
+		)
+
 	if get_region(pe.company) != COUNTRY_NAME:
 		frappe.throw(_("Bank payment file generation is only enabled for Sri Lanka companies."))
 
@@ -493,6 +518,8 @@ def generate_sri_lanka_payroll_bank_file(payroll_entry_name: str, bank_format: s
 
 	rows: list[BankPaymentRow] = []
 	for idx, row in enumerate(pe.get("employees") or [], start=1):
+		if flt(row.get("net_pay"), 2) <= 0:
+			continue
 		emp = frappe.db.get_value(
 			"Employee",
 			row.employee,
