@@ -94,10 +94,13 @@ def get_daily_metrics(today_str: str) -> Dict[str, Any]:
 
 def format_summary_message(metrics: Dict[str, Any]) -> str:
     """Format daily digest into rich HTML message for Telegram."""
-    curr = metrics.get("currency", "USD")
+    import html
+
+    curr = html.escape(str(metrics.get("currency", "USD")))
+    date_str = html.escape(str(metrics.get("date", "")))
     message = (
         f"📊 <b>DAILY BUSINESS SUMMARY</b>\n"
-        f"📅 <b>Date:</b> {metrics.get('date')}\n"
+        f"📅 <b>Date:</b> {date_str}\n"
         f"━━━━━━━━━━━━━━━━━━━\n\n"
         f"💰 <b>FINANCIAL PERFORMANCE:</b>\n"
         f"• <b>Sales Invoices:</b> {metrics.get('sales_count')} | <b>{curr} {metrics.get('sales_total', 0.0):,.2f}</b>\n"

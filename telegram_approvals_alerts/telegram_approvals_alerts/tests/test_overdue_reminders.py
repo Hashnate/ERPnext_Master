@@ -127,3 +127,30 @@ def test_customer_email_reminders_sent_when_explicitly_enabled(mock_frappe_env):
         send_overdue_invoice_reminders()
         mock_cust_email.assert_called_once()
         assert mock_cust_email.call_args[1]["customer_email"] == "billing@betaltd.com"
+
+
+def test_send_overdue_reminders_no_overdue_invoices(mock_frappe_env):
+    """When no invoices are overdue, reminders task exits without sending messages."""
+    mock_settings = MagicMock()
+    mock_settings.enabled = 1
+    mock_settings.enable_overdue_reminders = 1
+    mock_frappe_env.get_single.return_value = mock_settings
+    mock_frappe_env.db.sql.return_value = []  # No overdue invoices
+
+    with patch("telegram_approvals_alerts.services.telegram_service.TelegramBotClient.send_message") as mock_tg:
+        send_overdue_invoice_reminders()
+        mock_tg.assert_not_called()
+        mock_frappe_env.sendmail.assert_not_called()
+
+
+def test_send_overdue_reminders_disabled_in_settings(mock_frappe_env):
+    """When overdue reminders toggle is disabled, task does not dispatch alerts."""
+    mock_settings = MagicMock()
+    mock_settings.enabled = 1
+    mock_settings.enable_overdue_reminders = 0  # Disabled!
+    mock_frappe_env.get_single.return_value = mock_settings
+
+    with patch("telegram_approvals_alerts.services.telegram_service.TelegramBotClient.send_message") as mock_tg:
+        send_overdue_invoice_reminders()
+        mock_tg.assert_not_called()
+

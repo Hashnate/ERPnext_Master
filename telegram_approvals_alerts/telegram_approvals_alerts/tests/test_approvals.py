@@ -274,3 +274,191 @@ def test_respects_erpnext_workflow(mock_frappe_env):
         )
         assert res["success"] is True
         mock_apply.assert_called_once_with(doc, "Approve")
+
+
+def test_leave_application_rejection_success(mock_frappe_env):
+    """Leave Application rejection sets status to Rejected, saves document and adds comment."""
+    mock_frappe_env.get_all.return_value = [{
+        "user": "hr_manager@example.com",
+        "telegram_chat_id": "55555",
+        "can_approve_leave": 1,
+    }]
+
+    doc = MagicMock()
+    doc.docstatus = 0
+    doc.status = "Open"
+    doc.leave_approver = "hr_manager@example.com"
+    doc.name = "LAP-2026-0099"
+    doc.doctype = "Leave Application"
+    doc.flags = MagicMock()
+    mock_frappe_env.get_doc.return_value = doc
+
+    res = process_approval_action(
+        telegram_chat_id="55555",
+        action="reject",
+        doctype="Leave Application",
+        docname="LAP-2026-0099",
+    )
+
+    assert res["success"] is True
+    assert res["status_code"] == "SUCCESS"
+    assert doc.status == "Rejected"
+    doc.save.assert_called_once()
+    doc.add_comment.assert_called_once()
+
+
+def test_duplicate_click_on_already_rejected_purchase_order(mock_frappe_env):
+    """Cannot approve or re-reject a Purchase Order that has already been rejected/cancelled."""
+    mock_frappe_env.get_all.return_value = [{
+        "user": "buyer@example.com",
+        "telegram_chat_id": "12345",
+        "can_approve_po": 1,
+    }]
+
+    doc = MagicMock()
+    doc.docstatus = 0
+    doc.status = "Cancelled"
+    doc.name = "PO-2026-0001"
+    doc.doctype = "Purchase Order"
+    mock_frappe_env.get_doc.return_value = doc
+
+    res = process_approval_action(
+        telegram_chat_id="12345",
+        action="approve",
+        doctype="Purchase Order",
+        docname="PO-2026-0001",
+    )
+
+    assert res["success"] is False
+    assert res["status_code"] == "ALREADY_PROCESSED"
+    assert "already been cancelled" in res["message"].lower()
+
+
+def test_duplicate_click_on_already_rejected_leave_application(mock_frappe_env):
+    """Cannot approve a Leave Application that has already been rejected."""
+    mock_frappe_env.get_all.return_value = [{
+        "user": "manager@example.com",
+        "telegram_chat_id": "55555",
+        "can_approve_leave": 1,
+    }]
+
+    doc = MagicMock()
+    doc.docstatus = 0
+    doc.status = "Rejected"
+    doc.name = "LAP-2026-0088"
+    doc.doctype = "Leave Application"
+    mock_frappe_env.get_doc.return_value = doc
+
+    res = process_approval_action(
+        telegram_chat_id="55555",
+        action="approve",
+        doctype="Leave Application",
+        docname="LAP-2026-0088",
+    )
+
+    assert res["success"] is False
+    assert res["status_code"] == "ALREADY_PROCESSED"
+    assert "already been rejected" in res["message"].lower()
+
+
+def test_duplicate_click_on_already_rejected_expense_claim(mock_frappe_env):
+    """Cannot approve an Expense Claim that has already been rejected."""
+    mock_frappe_env.get_all.return_value = [{
+        "user": "finance@example.com",
+        "telegram_chat_id": "77777",
+        "can_approve_expense": 1,
+    }]
+
+    doc = MagicMock()
+    doc.docstatus = 0
+    doc.approval_status = "Rejected"
+    doc.name = "EXP-2026-0077"
+    doc.doctype = "Expense Claim"
+    mock_frappe_env.get_doc.return_value = doc
+
+    res = process_approval_action(
+        telegram_chat_id="77777",
+        action="approve",
+        doctype="Expense Claim",
+        docname="EXP-2026-0077",
+    )
+
+    assert res["success"] is False
+    assert res["status_code"] == "ALREADY_PROCESSED"
+    assert "already been rejected" in res["message"].lower()
+
+
+def test_user_authorization_disabled_erpnext_user(mock_frappe_env):
+    """Mapped Telegram user whose ERPNext account is disabled (enabled=0) is blocked."""
+    mock_frappe_env.get_all.return_value = [{
+        "user": "deactivated_employee@example.com",
+        "telegram_chat_id": "99999",
+        "can_approve_po": 1,
+    }]
+    # Simulate disabled user in tabUser
+    mock_frappe_env.db.get_value.return_value = 0
+
+    res = process_approval_action(
+        telegram_chat_id="99999",
+        action="approve",
+        doctype="Purchase Order",
+        docname="PO-2026-0001",
+    )
+
+    assert res["success"] is False
+    assert res["status_code"] == "UNAUTHORIZED"
+    assert "not mapped to an active erpnext user" in res["message"].lower()
+
+
+def test_document_not_found_in_erpnext(mock_frappe_env):
+    """Attempting to approve a non-existent document returns NOT_FOUND status."""
+    mock_frappe_env.get_all.return_value = [{
+        "user": "manager@example.com",
+        "telegram_chat_id": "12345",
+        "can_approve_po": 1,
+    }]
+    mock_frappe_env.db.exists.return_value = False
+
+    res = process_approval_action(
+        telegram_chat_id="12345",
+        action="approve",
+        doctype="Purchase Order",
+        docname="PO-NONEXISTENT",
+    )
+
+    assert res["success"] is False
+    assert res["status_code"] == "NOT_FOUND"
+    assert "not found" in res["message"].lower()
+
+
+def test_feature_toggle_disabled(mock_frappe_env):
+    """When a feature toggle is disabled in Telegram Settings, approvals are blocked."""
+    mock_settings = MagicMock()
+    mock_settings.enabled = 1
+    mock_settings.enable_po_approval = 0  # PO approvals disabled!
+    mock_frappe_env.get_single.return_value = mock_settings
+
+    res = process_approval_action(
+        telegram_chat_id="12345",
+        action="approve",
+        doctype="Purchase Order",
+        docname="PO-2026-0001",
+    )
+
+    assert res["success"] is False
+    assert res["status_code"] == "FEATURE_DISABLED"
+    assert "disabled in telegram settings" in res["message"].lower()
+
+
+def test_invalid_approval_action():
+    """Invalid action string returns INVALID_ACTION."""
+    res = process_approval_action(
+        telegram_chat_id="12345",
+        action="forward",
+        doctype="Purchase Order",
+        docname="PO-2026-0001",
+    )
+
+    assert res["success"] is False
+    assert res["status_code"] == "INVALID_ACTION"
+

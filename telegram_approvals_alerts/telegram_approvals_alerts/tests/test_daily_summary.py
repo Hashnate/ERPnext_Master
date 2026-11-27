@@ -91,3 +91,31 @@ def test_send_daily_summary_dispatches_telegram_and_email(mock_frappe_env):
         # Dispatched internal email
         mock_frappe_env.sendmail.assert_called_once()
         assert "manager@example.com" in mock_frappe_env.sendmail.call_args[1]["recipients"]
+
+
+def test_send_daily_summary_disabled_in_settings(mock_frappe_env):
+    """When daily summary toggle is disabled, task does not dispatch alerts."""
+    mock_settings = MagicMock()
+    mock_settings.enabled = 1
+    mock_settings.enable_daily_summary = 0
+    mock_frappe_env.get_single.return_value = mock_settings
+
+    with patch("telegram_approvals_alerts.services.telegram_service.TelegramBotClient.send_message") as mock_tg:
+        send_daily_summary()
+        mock_tg.assert_not_called()
+        mock_frappe_env.sendmail.assert_not_called()
+
+
+def test_send_daily_summary_no_recipients(mock_frappe_env):
+    """When no owner chat and no mapped recipients exist, task exits cleanly."""
+    mock_settings = MagicMock()
+    mock_settings.enabled = 1
+    mock_settings.enable_daily_summary = 1
+    mock_settings.owner_chat_id = None
+    mock_frappe_env.get_single.return_value = mock_settings
+    mock_frappe_env.get_all.return_value = []
+
+    with patch("telegram_approvals_alerts.services.telegram_service.TelegramBotClient.send_message") as mock_tg:
+        send_daily_summary()
+        mock_tg.assert_not_called()
+

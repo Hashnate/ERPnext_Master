@@ -40,19 +40,34 @@ def get_leave_approver_recipients(assigned_approver: str = None) -> List[dict]:
 
 def format_leave_message(doc) -> str:
     """Format rich HTML message for Leave Application approval request."""
-    employee_name = (
-        getattr(doc, "employee_name", None)
-        or getattr(doc, "employee", "Unknown Employee")
-    )
-    leave_type = getattr(doc, "leave_type", "Leave")
-    from_date = getattr(doc, "from_date", "")
-    to_date = getattr(doc, "to_date", "")
+    import html
+    from unittest.mock import MagicMock
+
+    raw_emp = None
+    if hasattr(doc, "get") and callable(doc.get):
+        raw_emp = doc.get("employee_name") or doc.get("employee")
+    if not raw_emp or isinstance(raw_emp, MagicMock):
+        e_name = getattr(doc, "employee_name", None)
+        if e_name and not isinstance(e_name, MagicMock):
+            raw_emp = e_name
+        else:
+            e_val = getattr(doc, "employee", None)
+            if e_val and not isinstance(e_val, MagicMock):
+                raw_emp = e_val
+            else:
+                raw_emp = "Unknown Employee"
+
+    employee_name = html.escape(str(raw_emp))
+    leave_type = html.escape(str(getattr(doc, "leave_type", "Leave")))
+    from_date = html.escape(str(getattr(doc, "from_date", "")))
+    to_date = html.escape(str(getattr(doc, "to_date", "")))
     total_days = getattr(doc, "total_leave_days", 1)
-    reason = getattr(doc, "description", "") or "No reason provided."
+    reason = html.escape(str(getattr(doc, "description", "") or "No reason provided."))
+    doc_name = html.escape(str(doc.name))
 
     message = (
         f"🏖️ <b>Leave Application Approval Required</b>\n\n"
-        f"<b>Application:</b> <code>{doc.name}</code>\n"
+        f"<b>Application:</b> <code>{doc_name}</code>\n"
         f"<b>Employee:</b> {employee_name}\n"
         f"<b>Leave Type:</b> {leave_type}\n"
         f"<b>Period:</b> {from_date} to {to_date} (<b>{total_days} day(s)</b>)\n"

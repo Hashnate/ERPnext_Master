@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 def get_mapped_telegram_user(telegram_chat_id: str) -> Optional[Dict[str, Any]]:
     """
     Look up active ERPNext user mapped to the given Telegram Chat ID.
+    Verifies both mapping record is active and ERPNext User is enabled in tabUser.
     Returns dict or Document if found and active, else None.
     """
     try:
@@ -34,7 +35,14 @@ def get_mapped_telegram_user(telegram_chat_id: str) -> Optional[Dict[str, Any]]:
             limit=1,
         )
         if users:
-            return users[0]
+            user_record = users[0]
+            erp_user = user_record.get("user")
+            if erp_user:
+                user_enabled = frappe.db.get_value("User", erp_user, "enabled")
+                if user_enabled in (0, "0", False):
+                    logger.warning("Mapped ERPNext user %s is disabled in User doctype.", erp_user)
+                    return None
+            return user_record
         return None
     except Exception as e:
         logger.error("Error looking up Telegram User Mapping: %s", e)
@@ -85,7 +93,7 @@ def check_assigned_approver(doc, erp_user: str, doctype: str) -> Tuple[bool, str
         import frappe
 
         # System Manager or Administrator can always approve
-        user_roles = frappe.get_roles(erp_user)
+        user_roles = frappe.get_roles(erp_user) or []
         if "System Manager" in user_roles or "Administrator" == erp_user:
             return True, ""
 
@@ -97,6 +105,8 @@ def check_assigned_approver(doc, erp_user: str, doctype: str) -> Tuple[bool, str
                         False,
                         f"You are not the designated Leave Approver ({assigned}) for this application.",
                     )
+            if not frappe.has_permission("Leave Application", ptype="submit", user=erp_user) and not frappe.has_permission("Leave Application", ptype="write", user=erp_user):
+                return False, "You do not have ERPNext permission to submit or update Leave Applications."
 
         elif doctype == "Expense Claim":
             assigned = getattr(doc, "expense_approver", None)
@@ -106,6 +116,8 @@ def check_assigned_approver(doc, erp_user: str, doctype: str) -> Tuple[bool, str
                         False,
                         f"You are not the designated Expense Approver ({assigned}) for this claim.",
                     )
+            if not frappe.has_permission("Expense Claim", ptype="submit", user=erp_user) and not frappe.has_permission("Expense Claim", ptype="write", user=erp_user):
+                return False, "You do not have ERPNext permission to submit or update Expense Claims."
 
         elif doctype == "Purchase Order":
             # Check Purchase User / Purchase Manager role or submit permission
@@ -138,8 +150,13 @@ def check_duplicate_or_terminal_state(doc, doctype: str) -> Tuple[bool, str]:
 
     elif doctype == "Expense Claim":
         current_status = getattr(doc, "approval_status", "Draft")
-        if current_status in ("Approved", "Rejected"):
+        if current_status in ("Approved", "Rejected", "Cancelled"):
             return True, f"Expense Claim {doc.name} has already been {current_status.lower()}."
+
+    elif doctype == "Purchase Order":
+        current_status = getattr(doc, "status", "Draft")
+        if current_status in ("Cancelled", "Closed"):
+            return True, f"Purchase Order {doc.name} has already been {current_status.lower()}."
 
     return False, ""
 

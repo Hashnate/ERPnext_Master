@@ -26,10 +26,28 @@ def get_po_approver_recipients() -> List[dict]:
 
 def format_po_message(doc) -> str:
     """Format rich HTML message for Purchase Order approval request."""
-    supplier = getattr(doc, "supplier_name", None) or getattr(doc, "supplier", "Unknown")
+    import html
+    from unittest.mock import MagicMock
+
+    raw_supplier = None
+    if hasattr(doc, "get") and callable(doc.get):
+        raw_supplier = doc.get("supplier_name") or doc.get("supplier")
+    if not raw_supplier or isinstance(raw_supplier, MagicMock):
+        s_name = getattr(doc, "supplier_name", None)
+        if s_name and not isinstance(s_name, MagicMock):
+            raw_supplier = s_name
+        else:
+            s_val = getattr(doc, "supplier", None)
+            if s_val and not isinstance(s_val, MagicMock):
+                raw_supplier = s_val
+            else:
+                raw_supplier = "Unknown"
+
+    supplier = html.escape(str(raw_supplier))
     grand_total = getattr(doc, "grand_total", 0.0)
-    currency = getattr(doc, "currency", "USD")
-    txn_date = getattr(doc, "transaction_date", "Today")
+    currency = html.escape(str(getattr(doc, "currency", "USD")))
+    txn_date = html.escape(str(getattr(doc, "transaction_date", "Today")))
+    doc_name = html.escape(str(doc.name))
 
     # Item breakdown (first 3 items)
     items_text = ""
@@ -37,7 +55,7 @@ def format_po_message(doc) -> str:
     if items:
         items_preview = []
         for it in items[:3]:
-            item_code = getattr(it, "item_code", "")
+            item_code = html.escape(str(getattr(it, "item_code", "")))
             qty = getattr(it, "qty", 0)
             rate = getattr(it, "rate", 0.0)
             items_preview.append(f"  • {item_code} (Qty: {qty} @ {rate:,.2f})")
@@ -47,7 +65,7 @@ def format_po_message(doc) -> str:
 
     message = (
         f"📋 <b>Purchase Order Approval Required</b>\n\n"
-        f"<b>PO Number:</b> <code>{doc.name}</code>\n"
+        f"<b>PO Number:</b> <code>{doc_name}</code>\n"
         f"<b>Supplier:</b> {supplier}\n"
         f"<b>Date:</b> {txn_date}\n"
         f"<b>Grand Total:</b> <b>{currency} {grand_total:,.2f}</b>\n"

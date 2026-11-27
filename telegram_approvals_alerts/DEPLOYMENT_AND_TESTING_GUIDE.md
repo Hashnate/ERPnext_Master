@@ -111,30 +111,47 @@ Navigate to **Telegram User Mapping**:
 ## 5. Verification Checklist: Offline vs Staging Tests
 
 | Feature / Requirement | Offline (Windows Mock) Status | Requires Live Staging Bench Verification | Verification Notes |
-| :--- | :--- | :--- | :--- |
-| **Telegram Message Formatting** | ✅ **Passed (37/37)** | Staging Verification | Renders HTML & Markdown tags in Telegram mobile/desktop client |
-| **Inline Approve/Reject Buttons** | ✅ **Passed (37/37)** | Staging Verification | Callback query roundtrip over live HTTPS webhook |
-| **Webhook Secret Validation** | ✅ **Passed (37/37)** | Staging Verification | Validates `X-Telegram-Bot-Api-Secret-Token` header from Telegram IP |
-| **Duplicate Button Click Guard** | ✅ **Passed (37/37)** | Staging Verification | Handles rapid double-clicking and locks message text |
-| **Purchase Order Approvals** | ✅ **Passed (37/37)** | Staging Verification | Full submission lifecycle & ERPNext buying workflow check |
-| **Leave Application Approvals** | ✅ **Passed (37/37)** | Staging Verification | Checks assigned `leave_approver` and Leave Allocation balances |
-| **Expense Claim Approvals** | ✅ **Passed (37/37)** | Staging Verification | Checks assigned `expense_approver` and expense accounts |
-| **Daily Business Summary** | ✅ **Passed (37/37)** | Staging Verification | Aggregates live MariaDB GL entries and sales invoice sums |
-| **Overdue Customer Alerts** | ✅ **Passed (37/37)** | Staging Verification | Tests Accounts Receivable aging queries against actual invoices |
-| **Customer Email Guard** | ✅ **Passed (37/37)** | Staging Verification | Strictly suppresses customer emails unless toggle is explicitly enabled |
-| **Native SMTP Notifications** | ✅ **Passed (37/37)** | Staging Verification | Verifies integration with Frappe Email Queue & SMTP relay server |
+| :--- | :---: | :---: | :--- |
+| **Telegram Message Formatting** | ✅ **Passed (70/70)** | Staging Verification | Renders HTML & Markdown tags safely with `html.escape` in Telegram clients |
+| **Inline Approve/Reject Buttons** | ✅ **Passed (70/70)** | Staging Verification | Callback query roundtrip over live HTTPS webhook |
+| **Webhook Secret Validation** | ✅ **Passed (70/70)** | Staging Verification | Validates `X-Telegram-Bot-Api-Secret-Token` header (case-insensitive) |
+| **Duplicate Button Click Guard** | ✅ **Passed (70/70)** | Staging Verification | Handles rapid double-clicking, locks message text, and clears inline buttons |
+| **Purchase Order Approvals** | ✅ **Passed (70/70)** | Staging Verification | Full submission lifecycle & ERPNext buying workflow check |
+| **Leave Application Approvals & Rejections** | ✅ **Passed (70/70)** | Staging Verification | Checks assigned `leave_approver`, Leave Allocation balances, and saves decisions |
+| **Expense Claim Approvals & Rejections** | ✅ **Passed (70/70)** | Staging Verification | Checks assigned `expense_approver`, expense accounts, and updates status |
+| **Disabled ERPNext User Guard** | ✅ **Passed (70/70)** | Staging Verification | Deactivated accounts in `tabUser` (`enabled = 0`) are blocked immediately |
+| **Daily Business Summary** | ✅ **Passed (70/70)** | Staging Verification | Aggregates live MariaDB GL entries and sales invoice sums |
+| **Overdue Customer Alerts** | ✅ **Passed (70/70)** | Staging Verification | Tests Accounts Receivable aging queries against actual invoices |
+| **Customer Email Guard** | ✅ **Passed (70/70)** | Staging Verification | Strictly suppresses customer emails unless toggle is explicitly enabled |
+| **Native SMTP Notifications** | ✅ **Passed (70/70)** | Staging Verification | Verifies integration with Frappe Email Queue & SMTP relay server without hardcoded credentials |
+| **Audit Logging & Timeline** | ✅ **Passed (70/70)** | Staging Verification | Logs all inbound/outbound events with credential sanitization and document comments |
 
 ---
 
 ## 6. How to Run Tests
 
 ### Local Environment (Windows / Mock Mode)
+Run the complete automated 70-test suite:
 ```bash
 cd telegram_approvals_alerts
 python -m pytest -v
 ```
 
 ### Live Frappe Bench Environment
+Run tests inside the live Frappe Bench test harness:
 ```bash
 bench --site [site_name] run-tests --app telegram_approvals_alerts
 ```
+
+---
+
+## 7. Troubleshooting & Common Issues
+
+| Issue / Error | Root Cause | Solution |
+| :--- | :--- | :--- |
+| **Webhook returns 401 Unauthorized** | Secret token header mismatch or proxy header stripping | Verify `webhook_secret` in Telegram Settings matches the `secret_token` configured in `setWebhook`. The app checks headers case-insensitively. |
+| **Telegram Bad Request: can't parse entities** | Unescaped HTML special characters (`<`, `>`, `&`) in item, supplier, or reason fields | The app uses `html.escape()` on all dynamic strings. Ensure custom modifications preserve escaping. |
+| **Approval button click shows "Access Denied"** | Telegram User is not mapped or lacks permission in `Telegram User Mapping` | Ensure a `Telegram User Mapping` record exists for the user's Chat ID with `can_approve_* = 1` and user is enabled in ERPNext. |
+| **Customer receives overdue email unexpectedly** | Customer email toggle was enabled | In **Telegram Settings**, ensure **Enable Customer Overdue Email Reminders** is unchecked (`0`). |
+| **Scheduler not running daily summary** | Background worker or scheduler disabled on site | Run `bench --site [site_name] enable-scheduler` and restart with `bench restart`. |
+

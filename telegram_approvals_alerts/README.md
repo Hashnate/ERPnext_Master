@@ -152,11 +152,13 @@ bench restart
 ## 🧪 4. Testing
 
 ### Running the Test Suite Locally
-All 37 unit and mock tests run under standard Python and pytest:
+All 70 unit and mock tests run under standard Python and pytest:
 ```bash
 cd telegram_approvals_alerts
 python -m pytest -v
 ```
+
+See [TEST_REPORT.md](TEST_REPORT.md) for detailed test execution breakdown, coverage metrics, and bug resolution logs.
 
 ### Running Tests in Frappe Bench
 ```bash
@@ -167,7 +169,11 @@ bench --site erp.example.com run-tests --app telegram_approvals_alerts
 
 ## 🔒 Security Best Practices
 
-1. **Webhook Authentication:** Every incoming webhook is validated using `X-Telegram-Bot-Api-Secret-Token` via constant-time comparison (`hmac.compare_digest`). Unauthorized requests return HTTP 401.
-2. **Credential Sanitization:** All bot tokens, passwords, and secrets are automatically masked (`******`) before writing to `Telegram Log` or system logs.
-3. **Permission Boundaries:** Approvals strictly evaluate `frappe.has_permission()`, assigned approver fields (`doc.leave_approver`, `doc.expense_approver`), and existing ERPNext Workflow transitions.
-4. **No Hardcoded Credentials:** SMTP credentials and Telegram secrets are dynamically sourced from encrypted database DocTypes.
+1. **Webhook Authentication:** Every incoming webhook is validated using `X-Telegram-Bot-Api-Secret-Token` (checked case-insensitively) via constant-time comparison (`hmac.compare_digest`). Unauthorized requests return HTTP 401.
+2. **ERPNext User Validation:** Mapped users must be active in `tabUser` (`enabled = 1`). Deactivated users in ERPNext are blocked immediately, even if mapping is active.
+3. **Duplicate Decision Prevention:** Documents in submitted, cancelled, approved, or rejected states are locked against subsequent duplicate clicks or conflicting decisions.
+4. **HTML Injection Protection:** Dynamic text in Telegram messages is sanitized with `html.escape()` to prevent syntax corruption or injection into Telegram's HTML parser.
+5. **Credential Sanitization:** All bot tokens, passwords, and secrets are automatically masked (`******`) before writing to `Telegram Log` or system logs.
+6. **Permission Boundaries:** Approvals strictly evaluate `frappe.has_permission()`, assigned approver fields (`doc.leave_approver`, `doc.expense_approver`), and existing ERPNext Workflow transitions.
+7. **No Hardcoded Credentials:** SMTP credentials and Telegram secrets are dynamically sourced from encrypted database DocTypes.
+

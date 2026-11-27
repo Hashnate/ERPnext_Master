@@ -146,14 +146,17 @@ def handle_callback_query(callback_query: Dict[str, Any], client) -> Dict[str, A
 
         # Edit Telegram message to lock buttons and show who approved
         if chat_id and message_id:
+            import html
             import frappe
             now_str = frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M:%S")
-            user_display = f"@{username}" if username else f"User {from_id}"
+            user_display = f"@{html.escape(username)}" if username else f"User {html.escape(str(from_id))}"
+            safe_original = html.escape(original_text)
+            safe_user = html.escape(str(result.get('user') or ''))
             updated_text = (
-                f"{original_text}\n\n"
+                f"{safe_original}\n\n"
                 f"━━━━━━━━━━━━━━━━━━━\n"
                 f"<b>Decision:</b> {'✅ Approved' if action == 'approve' else '❌ Rejected'}\n"
-                f"<b>By:</b> {user_display} ({result.get('user')})\n"
+                f"<b>By:</b> {user_display} ({safe_user})\n"
                 f"<b>Time:</b> {now_str}"
             )
             # Remove inline keyboard by passing reply_markup=None or empty
@@ -171,11 +174,14 @@ def handle_callback_query(callback_query: Dict[str, Any], client) -> Dict[str, A
             show_alert=True,
         )
         if chat_id and message_id:
+            import html
+            safe_original = html.escape(original_text)
+            safe_msg = html.escape(res_msg)
             # Clear buttons to stop further clicks
             client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text=f"{original_text}\n\n<i>[Action disabled: {res_msg}]</i>",
+                text=f"{safe_original}\n\n<i>[Action disabled: {safe_msg}]</i>",
                 reply_markup={"inline_keyboard": []},
             )
     elif status_code in ("UNAUTHORIZED", "FORBIDDEN", "NOT_ASSIGNED_APPROVER"):
@@ -286,10 +292,16 @@ def telegram_webhook():
     # 1. Validate Secret Token Header
     configured_secret = get_webhook_secret()
     header_secret = None
-    if hasattr(frappe, "get_request_header"):
+    if hasattr(frappe, "get_request_header") and callable(frappe.get_request_header):
         header_secret = frappe.get_request_header("X-Telegram-Bot-Api-Secret-Token")
-    elif hasattr(frappe, "request") and hasattr(frappe.request, "headers"):
-        header_secret = frappe.request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+        if not header_secret:
+            header_secret = frappe.get_request_header("x-telegram-bot-api-secret-token")
+    if not header_secret and hasattr(frappe, "request") and hasattr(frappe.request, "headers"):
+        headers = getattr(frappe.request, "headers", None) or {}
+        for k, v in headers.items():
+            if k.lower() == "x-telegram-bot-api-secret-token":
+                header_secret = v
+                break
 
     if configured_secret and not validate_secret_token(configured_secret, header_secret):
         logger.warning("Telegram webhook received with invalid secret token.")

@@ -58,17 +58,23 @@ def get_overdue_invoices(today_str: str) -> List[Dict[str, Any]]:
 
 def format_overdue_internal_message(invoices: List[Dict[str, Any]], today_str: str) -> str:
     """Format Telegram alert for management and accounts team."""
+    import html
+
     total_count = len(invoices)
     total_outstanding = sum(inv["outstanding_amount"] for inv in invoices)
-    currency = invoices[0]["currency"] if invoices else "USD"
+    currency = html.escape(str(invoices[0]["currency"] if invoices else "USD"))
+    safe_today = html.escape(str(today_str))
 
     # Preview top 5 overdue invoices
     lines = []
     for inv in invoices[:5]:
+        safe_cname = html.escape(str(inv['customer_name']))
+        safe_iname = html.escape(str(inv['name']))
+        safe_curr = html.escape(str(inv['currency']))
         lines.append(
-            f"• <b>{inv['customer_name']}</b> | <code>{inv['name']}</code>\n"
+            f"• <b>{safe_cname}</b> | <code>{safe_iname}</code>\n"
             f"  Due: {inv['due_date']} (<b>{inv['overdue_days']} days overdue</b>)\n"
-            f"  Outstanding: <b>{inv['currency']} {inv['outstanding_amount']:,.2f}</b>"
+            f"  Outstanding: <b>{safe_curr} {inv['outstanding_amount']:,.2f}</b>"
         )
 
     preview_text = "\n\n".join(lines)
@@ -77,7 +83,7 @@ def format_overdue_internal_message(invoices: List[Dict[str, Any]], today_str: s
 
     message = (
         f"⚠️ <b>OVERDUE INVOICE ALERT</b>\n"
-        f"📅 <b>Date:</b> {today_str}\n"
+        f"📅 <b>Date:</b> {safe_today}\n"
         f"━━━━━━━━━━━━━━━━━━━\n\n"
         f"🔢 <b>Total Overdue Invoices:</b> {total_count}\n"
         f"💰 <b>Total Outstanding:</b> <b>{currency} {total_outstanding:,.2f}</b>\n\n"

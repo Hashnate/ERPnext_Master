@@ -108,3 +108,89 @@ def test_handle_callback_query_duplicate_click(mock_frappe_env):
         assert "already" in client.answer_callback_query.call_args[1]["text"].lower()
         # Edits message to disable buttons
         client.edit_message_text.assert_called_once()
+
+
+def test_webhook_secret_header_invalid_returns_401(mock_frappe_env):
+    """Webhook rejects incoming request with HTTP 401 when header token does not match."""
+    mock_settings = MagicMock()
+    mock_settings.get_password = MagicMock(return_value="correct_secret_123")
+    mock_frappe_env.get_single.return_value = mock_settings
+    mock_frappe_env.get_request_header.return_value = "wrong_attacker_secret"
+
+    res = telegram_webhook()
+    assert res.get("status") == "error"
+    assert res.get("message") == "Unauthorized"
+    assert mock_frappe_env.response.get("http_status_code") == 401
+
+
+def test_webhook_secret_header_case_insensitive(mock_frappe_env):
+    """Webhook validates secret header even if header casing differs."""
+    mock_settings = MagicMock()
+    mock_settings.get_password = MagicMock(return_value="my_expected_secret")
+    mock_frappe_env.get_single.return_value = mock_settings
+    mock_frappe_env.get_request_header.return_value = None
+    mock_frappe_env.request.headers = {"x-telegram-bot-api-secret-token": "my_expected_secret"}
+    mock_frappe_env.request.get_json.return_value = {}
+
+    res = telegram_webhook()
+    assert res.get("status") == "ok"
+
+
+def test_handle_callback_query_invalid_payload(mock_frappe_env):
+    """Malformed callback query payload notifies user and returns ignored status."""
+    client = MagicMock()
+    callback_query = {
+        "id": "cb_invalid",
+        "from": {"id": 12345, "username": "tester"},
+        "data": "invalid_payload_without_colons",
+        "message": {"chat": {"id": 12345}, "message_id": 11, "text": "Something"},
+    }
+
+    res = handle_callback_query(callback_query, client)
+    assert res.get("status") == "ignored"
+    client.answer_callback_query.assert_called_once()
+    assert "invalid" in client.answer_callback_query.call_args[1]["text"].lower()
+
+
+def test_handle_text_message_status_command_active(mock_frappe_env):
+    """Verify /status command displays mapped user details and approval permissions."""
+    client = MagicMock()
+    msg = {
+        "chat": {"id": 7890},
+        "from": {"first_name": "Alice"},
+        "text": "/status",
+    }
+
+    mock_frappe_env.get_all.return_value = [{
+        "user": "alice@example.com",
+        "telegram_chat_id": "7890",
+        "can_approve_po": 1,
+        "can_approve_leave": 1,
+        "can_approve_expense": 0,
+        "receive_daily_summary": 1,
+    }]
+
+    res = handle_text_message(msg, client)
+    assert res.get("status") == "handled_status"
+    client.send_message.assert_called_once()
+    reply_text = client.send_message.call_args[1]["text"]
+    assert "alice@example.com" in reply_text
+    assert "Purchase Orders: ✅ Yes" in reply_text
+    assert "Expense Claims: ❌ No" in reply_text
+
+
+def test_handle_text_message_help_command():
+    """Verify /help command returns list of available bot commands."""
+    client = MagicMock()
+    msg = {
+        "chat": {"id": 12345},
+        "from": {"first_name": "Bob"},
+        "text": "/help",
+    }
+
+    res = handle_text_message(msg, client)
+    assert res.get("status") == "handled_help"
+    client.send_message.assert_called_once()
+    assert "/start" in client.send_message.call_args[1]["text"]
+    assert "/status" in client.send_message.call_args[1]["text"]
+

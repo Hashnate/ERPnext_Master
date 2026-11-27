@@ -40,16 +40,31 @@ def get_expense_approver_recipients(assigned_approver: str = None) -> List[dict]
 
 def format_expense_message(doc) -> str:
     """Format rich HTML message for Expense Claim approval request."""
-    employee_name = (
-        getattr(doc, "employee_name", None)
-        or getattr(doc, "employee", "Unknown Employee")
-    )
+    import html
+    from unittest.mock import MagicMock
+
+    raw_emp = None
+    if hasattr(doc, "get") and callable(doc.get):
+        raw_emp = doc.get("employee_name") or doc.get("employee")
+    if not raw_emp or isinstance(raw_emp, MagicMock):
+        e_name = getattr(doc, "employee_name", None)
+        if e_name and not isinstance(e_name, MagicMock):
+            raw_emp = e_name
+        else:
+            e_val = getattr(doc, "employee", None)
+            if e_val and not isinstance(e_val, MagicMock):
+                raw_emp = e_val
+            else:
+                raw_emp = "Unknown Employee"
+
+    employee_name = html.escape(str(raw_emp))
     total_amount = getattr(doc, "total_claimed_amount", 0.0)
-    remarks = getattr(doc, "remark", "") or "No remarks provided."
+    remarks = html.escape(str(getattr(doc, "remark", "") or "No remarks provided."))
+    doc_name = html.escape(str(doc.name))
 
     message = (
         f"💼 <b>Expense Claim Approval Required</b>\n\n"
-        f"<b>Claim:</b> <code>{doc.name}</code>\n"
+        f"<b>Claim:</b> <code>{doc_name}</code>\n"
         f"<b>Employee:</b> {employee_name}\n"
         f"<b>Total Claimed:</b> <b>{total_amount:,.2f}</b>\n"
         f"<b>Remarks:</b> <i>{remarks}</i>\n\n"

@@ -146,3 +146,57 @@ def test_send_message_timeout_handling(mock_frappe_env):
         success, res = client.send_message(chat_id="12345", text="Test")
         assert success is False
         assert "timeout" in res.get("error", "").lower()
+
+
+def test_telegram_bot_client_unconfigured_token(mock_frappe_env):
+    """Client with no configured token refuses API calls gracefully."""
+    mock_settings = MagicMock()
+    mock_settings.get_password = MagicMock(return_value=None)
+    mock_settings.bot_token = None
+    mock_frappe_env.get_single.return_value = mock_settings
+
+    client = TelegramBotClient(token=None)
+    assert client.is_configured is False
+    success, res = client.send_message(chat_id="123", text="Hello")
+    assert success is False
+    assert "not configured" in res.get("error", "").lower()
+
+
+def test_answer_callback_query_success():
+    """Verify answering callback queries sends payload to Telegram."""
+    client = TelegramBotClient(token="mock_token_123")
+    fake_response = MagicMock()
+    fake_response.getcode.return_value = 200
+    fake_response.read.return_value = b'{"ok": true, "result": true}'
+    fake_response.__enter__.return_value = fake_response
+    fake_response.__exit__.return_value = None
+
+    with patch("urllib.request.urlopen", return_value=fake_response):
+        success, res = client.answer_callback_query(
+            callback_query_id="cb_12345",
+            text="Done",
+            show_alert=True,
+        )
+        assert success is True
+        assert res is True
+
+
+def test_edit_message_text_success():
+    """Verify editing message text dispatches editMessageText request."""
+    client = TelegramBotClient(token="mock_token_123")
+    fake_response = MagicMock()
+    fake_response.getcode.return_value = 200
+    fake_response.read.return_value = b'{"ok": true, "result": {"message_id": 99}}'
+    fake_response.__enter__.return_value = fake_response
+    fake_response.__exit__.return_value = None
+
+    with patch("urllib.request.urlopen", return_value=fake_response):
+        success, res = client.edit_message_text(
+            chat_id="12345",
+            message_id=99,
+            text="<b>Updated</b>",
+            reply_markup={"inline_keyboard": []},
+        )
+        assert success is True
+        assert res.get("message_id") == 99
+
