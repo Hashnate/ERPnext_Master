@@ -53,6 +53,7 @@
    "fieldname": "nic_number",
    "fieldtype": "Data",
    "label": "NIC Number",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -60,6 +61,7 @@
    "fieldname": "epf_number",
    "fieldtype": "Data",
    "label": "EPF Member No.",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -67,7 +69,8 @@
    "fetch_from": "employee.is_non_resident_for_apit",
    "fieldname": "is_non_resident_for_apit",
    "fieldtype": "Check",
-   "label": "Non-Resident for APIT"
+   "label": "Non-Resident for APIT",
+   "print_hide": 1
   },
   {
    "fieldname": "column_break_earnings",
@@ -80,6 +83,7 @@
    "in_list_view": 1,
    "label": "Basic Salary",
    "options": "currency",
+   "print_hide": 1,
    "reqd": 1
   },
   {
@@ -87,21 +91,24 @@
    "fieldname": "epf_liable_allowances",
    "fieldtype": "Currency",
    "label": "EPF-Liable Allowances / BRA",
-   "options": "currency"
+   "options": "currency",
+   "print_hide": 1
   },
   {
    "default": "0",
    "fieldname": "non_epf_allowances",
    "fieldtype": "Currency",
    "label": "Non-EPF Allowances",
-   "options": "currency"
+   "options": "currency",
+   "print_hide": 1
   },
   {
    "default": "0",
    "fieldname": "lump_sum_bonus",
    "fieldtype": "Currency",
    "label": "Lump Sum / Bonus",
-   "options": "currency"
+   "options": "currency",
+   "print_hide": 1
   },
   {
    "default": "0",
@@ -118,6 +125,7 @@
    "fieldtype": "Currency",
    "label": "EPF / ETF Liable Earnings",
    "options": "currency",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -140,6 +148,7 @@
    "fieldtype": "Currency",
    "label": "EPF Employer",
    "options": "currency",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -148,6 +157,7 @@
    "fieldtype": "Currency",
    "label": "ETF Employer",
    "options": "currency",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -164,7 +174,8 @@
    "fieldname": "other_deductions",
    "fieldtype": "Currency",
    "label": "Other Deductions",
-   "options": "currency"
+   "options": "currency",
+   "print_hide": 1
   },
   {
    "default": "0",
@@ -172,6 +183,7 @@
    "fieldtype": "Currency",
    "label": "Total Deduction",
    "options": "currency",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -192,25 +204,29 @@
    "fetch_from": "employee.bank_name",
    "fieldname": "bank_name",
    "fieldtype": "Data",
-   "label": "Bank Name"
+   "label": "Bank Name",
+   "print_hide": 1
   },
   {
    "fetch_from": "employee.sri_lanka_bank_code",
    "fieldname": "bank_code",
    "fieldtype": "Data",
-   "label": "Bank Code (4-Digit)"
+   "label": "Bank Code (4-Digit)",
+   "print_hide": 1
   },
   {
    "fetch_from": "employee.sri_lanka_branch_code",
    "fieldname": "branch_code",
    "fieldtype": "Data",
-   "label": "Branch Code (3-Digit)"
+   "label": "Branch Code (3-Digit)",
+   "print_hide": 1
   },
   {
    "fetch_from": "employee.bank_ac_no",
    "fieldname": "bank_account_no",
    "fieldtype": "Data",
-   "label": "Bank Account No."
+   "label": "Bank Account No.",
+   "print_hide": 1
   }
  ],
  "index_web_pages_for_search": 1,

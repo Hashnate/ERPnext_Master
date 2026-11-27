@@ -532,8 +532,38 @@ def seed_salary_components():
 			frappe.db.set_value("Salary Component", "Basic", "is_epf_etf_applicable", 1, update_modified=False)
 
 
+def ensure_salary_slip_standard_print_layout():
+	"""Prevent Standard Salary Slip side-by-side Earnings/Deductions tables from overflowing."""
+	if not frappe.db.exists("DocType", "Salary Detail"):
+		return
+
+	for fieldname in ("year_to_date", "tax_on_flexible_benefit", "tax_on_additional_salary"):
+		if not frappe.db.exists("DocField", {"parent": "Salary Detail", "fieldname": fieldname}):
+			continue
+		if frappe.db.exists(
+			"Property Setter",
+			{
+				"doc_type": "Salary Detail",
+				"field_name": fieldname,
+				"property": "print_hide",
+			},
+		):
+			continue
+		frappe.make_property_setter(
+			{
+				"doctype": "Salary Detail",
+				"fieldname": fieldname,
+				"doctype_or_field": "DocField",
+				"property": "print_hide",
+				"value": "1",
+				"property_type": "Check",
+			},
+			validate_fields_for_doctype=False,
+		)
+
+
 def ensure_salary_slip_print_format():
-	"""Create/enable the Sri Lanka Salary Slip print format when HRMS Salary Slip exists."""
+	"""Create/enable the Sri Lanka Salary Slip print format and clean Standard layout."""
 	if not frappe.db.exists("DocType", "Salary Slip"):
 		return
 
@@ -562,6 +592,23 @@ def ensure_salary_slip_print_format():
 		).insert(ignore_permissions=True)
 	elif frappe.db.get_value("Print Format", pf_name, "disabled"):
 		frappe.db.set_value("Print Format", pf_name, "disabled", 0, update_modified=False)
+
+	ensure_salary_slip_standard_print_layout()
+
+	if not frappe.get_meta("Salary Slip").default_print_format and not frappe.db.exists(
+		"Property Setter",
+		{"doc_type": "Salary Slip", "doctype_or_field": "DocType", "property": "default_print_format"},
+	):
+		frappe.make_property_setter(
+			{
+				"doctype": "Salary Slip",
+				"doctype_or_field": "DocType",
+				"property": "default_print_format",
+				"value": pf_name,
+				"property_type": "Link",
+			},
+			validate_fields_for_doctype=False,
+		)
 
 
 def _insert_items_in_section(items: list, section_label: str | None, new_items: list[dict]) -> bool:

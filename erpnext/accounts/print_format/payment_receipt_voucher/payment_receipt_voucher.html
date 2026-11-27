@@ -5,10 +5,10 @@
     {{ add_header(0, 1, doc, letter_head, no_letterhead, print_settings) }}
 
     {%- for label, value in (
-        (_("Received On"), frappe.utils.format_date(doc.voucher_date)),
-        (_("Received From"), doc.pay_to_recd_from),
-        (_("Amount"), "<strong>" + doc.get_formatted("total_amount") + "</strong><br>" + (doc.total_amount_in_words or "") + "<br>"),
-        (_("Remarks"), doc.remark)
+        (_("Received On"), frappe.utils.format_date(doc.voucher_date) if doc.voucher_date else ""),
+        (_("Received From"), doc.pay_to_recd_from or ""),
+        (_("Amount"), "<strong>" + (doc.get_formatted("total_amount") or "") + "</strong><br>" + (doc.total_amount_in_words or "") + "<br>"),
+        (_("Remarks"), doc.remark or "")
     ) -%}
     <div class="row">
         <div class="col-xs-3"><label class="text-right">{{ label }}</label></div>

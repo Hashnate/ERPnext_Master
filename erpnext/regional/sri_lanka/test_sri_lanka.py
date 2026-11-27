@@ -739,6 +739,24 @@ class TestSriLankaMetadataJSON(unittest.TestCase):
 				"Sri Lanka VAT Return",
 			)
 
+	def test_sri_lanka_payroll_employee_print_columns_compact(self):
+		repo_root = Path(__file__).resolve().parents[3]
+		data = json.loads(
+			(
+				repo_root
+				/ "erpnext/regional/doctype/sri_lanka_payroll_employee/sri_lanka_payroll_employee.json"
+			).read_text(encoding="utf-8")
+		)
+		printable_fields = [
+			f["fieldname"]
+			for f in data["fields"]
+			if f["fieldtype"] not in ("Section Break", "Column Break") and not f.get("print_hide")
+		]
+		self.assertEqual(
+			printable_fields,
+			["employee", "employee_name", "gross_pay", "epf_employee", "apit_tax", "net_pay"],
+		)
+
 
 if __name__ == "__main__":
 	unittest.main()

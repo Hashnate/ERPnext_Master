@@ -6,6 +6,7 @@
 </style>
 <div>
     {% set gl = frappe.get_list(doctype="GL Entry",  fields=["account", "party_type", "party", "debit", "credit", "remarks"], filters={"voucher_type": doc.doctype, "voucher_no": doc.name}) %}
+    {% set currency = frappe.db.get_value("Company", doc.company, "default_currency") %}
     {%- if not doc.get("print_heading") and not doc.get("select_print_heading")
         and doc.set("select_print_heading", _("Journal Entry")) -%}{%- endif -%}
     {{ add_header(0, 1, doc, letter_head, no_letterhead, print_settings) }}
@@ -17,7 +18,7 @@
             </div>
             <div class="col-xs-6">
                 <table>
-                    <tr><td><strong>Date: </strong></td><td>{{  frappe.utils.format_date(doc.posting_date)  }}</td></tr>
+                    <tr><td><strong>Date: </strong></td><td>{{ frappe.utils.format_date(doc.posting_date) if doc.posting_date else "" }}</td></tr>
                 </table>
             </div>
     </div>
@@ -27,45 +28,45 @@
                 <th>Account</th>
                 <th>Party Type</th>
                 <th>Party</th>
-                <th>Amount</th>
+                <th class="text-right">Amount</th>
             </tr>
             <tr>
-                <td class="top-bottom" colspan="5"><strong>Debit</strong></td>
+                <td class="top-bottom" colspan="4"><strong>Debit</strong></td>
             </tr>
             {% for entries in gl %}
             {% if entries.credit == 0.0 %}
             <tr>
-                <td class="right top-bottom">{{ entries.account }}</td>
-                <td class="right left top-bottom">{{ entries.party_type }}</td>
-                <td class="right left top-bottom">{{ entries.party }}</td>
-                <td class="left top-bottom">{{ entries.debit }}</td>
+                <td class="right top-bottom">{{ entries.account or "" }}</td>
+                <td class="right left top-bottom">{{ entries.party_type or "" }}</td>
+                <td class="right left top-bottom">{{ entries.party or "" }}</td>
+                <td class="left top-bottom text-right">{{ frappe.format(entries.debit, {"fieldtype": "Currency", "options": currency}) }}</td>
             </tr>
             {% endif %}
             {% endfor %}
             <tr>
                     <td class="right" colspan="3" ><strong>Total (debit) </strong></td>
-                    <td class="left" >{{ gl | sum(attribute='debit') | round(2) }}</td>
+                    <td class="left text-right" >{{ frappe.format((gl | sum(attribute='debit')), {"fieldtype": "Currency", "options": currency}) }}</td>
             </tr>
             <tr>
-                    <td class="top-bottom" colspan="5"><strong>Credit</strong></td>
+                    <td class="top-bottom" colspan="4"><strong>Credit</strong></td>
             </tr>
             {% for entries in gl %}
             {% if entries.debit == 0.0 %}
             <tr>
-                <td class="right top-bottom">{{ entries.account }}</td>
-                <td class="right left top-bottom">{{ entries.party_type }}</td>
-                <td class="right left top-bottom">{{ entries.party }}</td>
-                <td class="left top-bottom">{{ entries.credit }}</td>
+                <td class="right top-bottom">{{ entries.account or "" }}</td>
+                <td class="right left top-bottom">{{ entries.party_type or "" }}</td>
+                <td class="right left top-bottom">{{ entries.party or "" }}</td>
+                <td class="left top-bottom text-right">{{ frappe.format(entries.credit, {"fieldtype": "Currency", "options": currency}) }}</td>
             </tr>
             {% endif %}
             {% endfor %}
             <tr>
                 <td class="right" colspan="3"><strong>Total (credit) </strong></td>
-                <td class="left" >{{ gl | sum(attribute='credit') | round(2) }}</td>
+                <td class="left text-right" >{{ frappe.format((gl | sum(attribute='credit')), {"fieldtype": "Currency", "options": currency}) }}</td>
             </tr>
             <tr>
-                <td class="top-bottom" colspan="5"><b>Narration: </b>{{ gl[0].remarks }}</td>
+                <td class="top-bottom" colspan="4"><b>Narration: </b>{{ (gl[0].remarks if gl else doc.user_remark) or "" }}</td>
             </tr>
         </table>
-    <div>
+    </div>
 </div>
